@@ -1,6 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
+use std::mem;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -27,6 +28,7 @@ const DELTA: f64 = 0.0001;
 const MAGNET_RADIUS: f64 = 15.0;
 
 #[wasm_bindgen]
+#[repr(C)]
 #[derive(Clone, Copy,Debug)]
 pub struct Vec2D {
     pub x: f64,
@@ -58,6 +60,7 @@ impl std::ops::Mul<f64> for Vec2D {
 
 #[wasm_bindgen]
 impl Vec2D {
+    #[wasm_bindgen(constructor)]
     pub fn new(x: f64, y: f64) -> Vec2D {
         Vec2D { x, y }
     }
@@ -79,14 +82,18 @@ impl Default for Vec2D {
     }
 }
 
+#[wasm_bindgen]
+#[repr(C)]
 pub struct Rgb {
     r: u8,
     g: u8,
     b: u8,
 }
 
+#[wasm_bindgen]
 impl Rgb {
-    fn new(r: u8, g: u8, b: u8) -> Rgb {
+    #[wasm_bindgen(constructor)]
+    pub fn new(r: u8, g: u8, b: u8) -> Rgb {
         Rgb { r, g, b }
     }
 
@@ -96,6 +103,7 @@ impl Rgb {
 }
 
 #[wasm_bindgen]
+#[repr(C)]
 pub struct Universe {
     width: u32,
     height: u32,
@@ -106,17 +114,21 @@ pub struct Universe {
     magnets: Vec<Magnet>,
     /// the max iterations for computing the magnet associated with a pendulum
     max_iters: u32,
+    nums: Vec<u8>,
 }
 
 #[wasm_bindgen]
 impl Universe {
+    #[wasm_bindgen(constructor)]
     pub fn new(width: u32, height: u32, max_iters: u32) -> Universe {
+        // create some magnets
         Universe {
             width,
             height,
             pendulums: vec![],
             magnets: vec![],
             max_iters,
+            nums: vec![42; 10],
         }
     }
     /// Computes the tension force induced on a pendulum
@@ -137,6 +149,9 @@ impl Universe {
 
     pub fn add_magnet(&mut self, magnet: Magnet) {
         self.magnets.push(magnet);
+    }
+    pub fn add_nums(&mut self, n: u8) {
+        self.nums.push(n as u8)
     }
 
     pub fn clear_magnets(&mut self) {
@@ -164,6 +179,26 @@ impl Universe {
     pub fn height(&self) -> u32 {
         self.height
     }
+
+    pub fn pendulums(&self) -> *const Pendulum {
+        self.pendulums.as_ptr()
+    }
+
+    pub fn magnets(&self) -> *const Magnet {
+        self.magnets.as_ptr()
+    }
+
+    pub fn nums(&self) -> *const u8 {
+        self.nums.as_ptr()
+    }
+
+    pub fn pendulums_len(&self) -> u32 {
+        self.pendulums.len() as u32
+    }
+
+    pub fn magnets_len(&self) -> u32 {
+        self.magnets.len() as u32
+    }
 }
 
 impl Universe {
@@ -171,8 +206,13 @@ impl Universe {
     pub fn get_pendulums(&self) -> &[Pendulum] {
         &self.pendulums
     }
+
+    pub fn get_magnets(&self) -> &[Magnet] {
+        &self.magnets
+    }
 }
 
+#[repr(C)]
 #[wasm_bindgen]
 pub struct Magnet {
     pos: Vec2D,
@@ -182,12 +222,17 @@ pub struct Magnet {
 
 #[wasm_bindgen]
 impl Magnet {
+    #[wasm_bindgen(constructor)]
     pub fn new(pos: Vec2D, strength: f64) -> Magnet {
         Magnet {
             pos,
             strength,
             color: Rgb::black(),
         }
+    }
+    
+    pub fn size_of() -> u32 {
+        mem::size_of::<Magnet>() as u32
     }
 }
 
@@ -271,6 +316,33 @@ impl Pendulum {
         for _ in 0..steps {
             self.vel = self.vel + self.acc * delta;
             self.pos = self.pos + self.vel * delta;
+        }
+    }
+}
+
+#[wasm_bindgen]
+pub struct Image {
+    data: Vec<u8>,
+}
+
+#[wasm_bindgen]
+impl Image {
+    pub fn new(length: usize) -> Image {
+        Image { data: vec![42; length] }
+    }
+
+    pub fn get_pointer(&self) -> *const u8 {
+        self.data.as_ptr()
+    }
+
+    pub fn get_length(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn get_first_element(&self) -> u8 {
+        match self.data.get(0) {
+            Some(v) => *v,
+            None => 0,
         }
     }
 }
