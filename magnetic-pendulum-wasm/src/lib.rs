@@ -236,6 +236,7 @@ impl Magnet {
     }
 }
 
+#[repr(C)]
 #[wasm_bindgen]
 pub struct Pendulum {
     pos_start: Vec2D,
@@ -272,6 +273,10 @@ impl Pendulum {
             friction,
             is_stationary: false,
         }
+    }
+
+    pub fn size_of() -> usize {
+        mem::size_of::<Pendulum>()
     }
 
     pub fn pos(&self) -> Vec2D {

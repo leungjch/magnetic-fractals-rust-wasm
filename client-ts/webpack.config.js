@@ -31,6 +31,9 @@ module.exports = {
         index: '/dist'
       },
       devMiddleware: { writeToDisk: true }
+  },
+  resolve: {
+    extensions: ['.ts', '.js', '.json']
   }
 
 };

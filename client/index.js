@@ -1,9 +1,11 @@
-// import * as wasm from "hello-wasm-pack";
+import { Universe, Cell } from "magnetic-pendulum-rs";
+import { memory } from "magnetic-pendulum-rs/magnetic_pendulum_rs_bg";
 
-// wasm.greet();
+const pre = document.getElementById("magnetic-pendulum-canvas")
 
-import * as wasm from "magnetic-pendulum-wasm"
-import { memory } from "magnetic-pendulum-wasm/magnetic_pendulum_bg";
+
+import * as wasm from "magnetic-pendulum-rs"
+// import { memory } from "magnetic-pendulum-wasm/magnetic_pendulum_wasm_bg";
 
 const image = wasm.Image.new(10);
 console.log(memory)

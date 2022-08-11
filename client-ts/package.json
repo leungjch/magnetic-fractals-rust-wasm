@@ -13,7 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "copy-webpack-plugin": "^11.0.0",
-    "magnetic-pendulum-wasm": "file:../magnetic-pendulum-wasm/pkg",
+    "magnetic-pendulum-rs": "file:../magnetic-pendulum-rs/pkg",
     "ts-loader": "^9.3.1",
     "typescript": "^4.7.4",
     "webpack": "^5.74.0",

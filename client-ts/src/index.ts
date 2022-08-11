@@ -1,22 +1,16 @@
 
-import * as wasm from "magnetic-pendulum-wasm"
-import { memory } from "magnetic-pendulum-wasm/magnetic_pendulum_bg.wasm";
+import * as wasm from "magnetic-pendulum-rs"
+import { memory } from "magnetic-pendulum-rs/magnetic_pendulum_rs_bg.wasm";
 import { exit } from "process";
 import { deflateRaw } from "zlib";
-
+import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 // wasm.greet();
-const universe = new wasm.Universe(512,512,100);
+const universe = new wasm.Universe(64,64,100);
 
-// universe.add_magnet(new wasm.Magnet(
-//     new wasm.Vec2D(0.0, 0.0),
-//     1.0
-// ));
-memory.grow(1)
+universe.add_nums(3.15)
 
-universe.add_nums(12)
-
-const width = universe.width()
-const height = universe.height()
+const width = universe.width()*50
+const height = universe.height()*50
 console.log(width,height)
 const canvas = <HTMLCanvasElement> document.getElementById('magnetic-pendulum-canvas')
 canvas.width = width;
@@ -35,29 +29,114 @@ function renderLoop() {
 };
 
 function draw(universe: wasm.Universe ) {
+
+  // Read magnets from wasm memory
   const magnets_ptr = universe.magnets()
-  const nums_ptr = universe.nums();
   const magnet_sizeof = wasm.Magnet.size_of()
   const magnets_n = universe.magnets_len();
-  console.log(memory.buffer.byteLength)
-  console.log(memory)
-  console.log("SIZEOF IS", nums_ptr, 1)
-  const magnets = new Uint8Array(memory.buffer, nums_ptr, 1)
-  console.log(magnets[0])
+  // console.log("magnets_n", magnets_n, memory, magnets_ptr)
+  let dv_magnets = new DataView(memory.buffer, magnets_ptr, magnets_n*magnet_sizeof);
+
+  // Render magnets from wasm memory
+  for (let i = 0; i < magnets_n; i++) {
+    let magnet : Magnet = getMagnet(dv_magnets, i*magnet_sizeof);
+    ctx.beginPath();
+    ctx.fillStyle = "yellow";
+    ctx.rect(magnet.pos.x+width/2, magnet.pos.y+height/2, 5, 5)
+    ctx.fill();
+
+    // console.log("got magnet", magnet)
+
+  }
+
+  // Read pendulums from wasm memory
+  const pendulums_ptr = universe.pendulums()
+  const pendulum_sizeof = wasm.Pendulum.size_of()
+  const pendulums_n = universe.pendulums_len();
+  let dv_pendulums = new DataView(memory.buffer, pendulums_ptr, pendulums_n*pendulum_sizeof);
+
+
+  // Render pendulums from wasm memory
+  for (let i = 0; i < pendulums_n; i++) {
+    let pendulum = getPendulum(dv_pendulums, pendulum_sizeof*i)
+    // console.log("got pendulum", pendulum)
+    ctx.beginPath();
+    ctx.fillStyle = "blue";
+    ctx.rect(pendulum.pos.x+width/2, pendulum.pos.y+height/2, 5, 5)
+    ctx.fill();
+  }
+
+
+
 };
 
-// requestAnimationFrame(renderLoop);
+requestAnimationFrame(renderLoop);
 
-
-const image = wasm.Image.new(10);
-console.log(memory)
-console.log("ptr is", image.get_pointer())
-const buf = new Uint8ClampedArray(memory.buffer, image.get_pointer(), 10);
-
-for (let i = 0; i < 10; i++) {
-  console.log(buf[i])
-  buf[i] = 255;
+function getMagnet(dv : DataView, ptr: number) {
+  let offset = ptr;
+  let strength = dv.getFloat64(offset, true); offset += 8;
+  let pos_x = dv.getFloat64(offset, true);  offset += 8;
+  let pos_y = dv.getFloat64(offset, true); offset += 8;
+  let color_r = dv.getUint8(offset); offset += 1;
+  let color_g = dv.getUint8(offset); offset += 1;
+  let color_b = dv.getUint8(offset); offset += 1;
+  return new Magnet(
+    strength,
+    new Vec2D(pos_x, pos_y),
+    new Rgb(color_r, color_g, color_b)
+  )
 }
 
-console.log(image.get_length());
-console.log(image.get_first_element(), buf[0]);
+function getPendulum(dv: DataView, ptr: number) {
+  let offset = ptr;
+  let pos_start_x = dv.getFloat64(offset, true); offset += 8;
+  let pos_start_y = dv.getFloat64(offset, true); offset += 8;
+  let pos_x = dv.getFloat64(offset, true); offset += 8;
+  let pos_y = dv.getFloat64(offset, true); offset += 8;
+  let vel_x = dv.getFloat64(offset, true); offset += 8;
+  let vel_y = dv.getFloat64(offset, true); offset += 8;
+  let acc_x = dv.getFloat64(offset, true); offset += 8;
+  let acc_y = dv.getFloat64(offset, true); offset += 8;
+  let ten_x = dv.getFloat64(offset, true); offset += 8;
+  let ten_y = dv.getFloat64(offset, true); offset += 8;
+  let k = dv.getFloat64(offset, true); offset += 8;
+  let friction = dv.getFloat64(offset, true); offset += 8;
+  let mag_x = dv.getFloat64(offset, true); offset += 8;
+  let mag_y = dv.getFloat64(offset, true); offset += 8;
+  let fnet_x = dv.getFloat64(offset, true); offset += 8;
+  let fnet_y = dv.getFloat64(offset, true); offset += 8;
+  let isStationary = dv.getUint8(offset) == 1 ? true : false; offset += 1;
+  return new Pendulum(
+    new Vec2D(pos_start_x, pos_start_y),
+    new Vec2D(pos_x, pos_y),
+    new Vec2D(vel_x, vel_y),
+    new Vec2D(acc_x, acc_y),
+    new Vec2D(ten_x, ten_y),
+    k,
+    friction,
+    new Vec2D(mag_x, mag_y),
+    new Vec2D(fnet_x, fnet_y),
+    isStationary
+  );
+}
+
+// function getNum(buffer : ArrayBuffer, ptr: number, n: number) {
+//   let dv = new DataView(buffer, ptr, 16);
+//   // dv.setFloat64(ptr, Math.PI);
+//   let myArray = new Float64Array(memory.buffer, nums_ptr, 2);
+//   console.log(myArray)
+  
+//   let offset = 0;
+//   let i = 0;
+//   let ret = [];
+//   console.log(buffer.slice(offset, offset+8+1))
+//   console.log("bytelength is", buffer.byteLength, "offset is", offset)
+//   while (offset < buffer.byteLength && i < n) {
+//       let strength = dv.getFloat64(offset, true); offset += 8;
+//       console.log("strength is", strength)
+//       ret.push(strength);
+//       i += 1;
+//   }
+//   return ret;
+
+// }
