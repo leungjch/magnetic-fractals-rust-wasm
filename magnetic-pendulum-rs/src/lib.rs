@@ -25,7 +25,7 @@ const DELTA: f64 = 0.0001;
 // The radius of a magnet
 // if the distance between the pendulum and a magnet is below this value
 // then it is considered to be absorbed by the magnet.
-const MAGNET_RADIUS: f64 = 0.005;
+const MAGNET_RADIUS: f64 = 0.1;
 
 #[wasm_bindgen]
 #[repr(C)]
@@ -123,10 +123,9 @@ impl Universe {
     pub fn new(width: u32, height: u32, max_iters: u32) -> Universe {
         // create some magnets
         let magnets = vec![
-            Magnet::new(Vec2D::new(100.0,2.0), 1000.05),
-            Magnet::new(Vec2D::new(50.0,50.0), 500.05),
+            Magnet::new(Vec2D::new(50.0,50.0), 100.05),
             ];
-        let pendulums = vec![Pendulum::new(Vec2D::new(-5.0, 0.0), 0.0,0.0)];
+        let pendulums = vec![Pendulum::new(Vec2D::new(-50.0, 50.0), 1.0,1.0)];
 
         Universe {
             width,

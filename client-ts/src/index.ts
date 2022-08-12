@@ -7,8 +7,6 @@ import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 // wasm.greet();
 const universe = new wasm.Universe(64,64,100);
 
-universe.add_nums(3.15)
-
 const width = universe.width()*50
 const height = universe.height()*50
 console.log(width,height)
@@ -17,7 +15,7 @@ canvas.width = width;
 canvas.height = height;
 
 const ctx = canvas.getContext('2d');
-ctx.fillStyle = "green";
+ctx.fillStyle = "black";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 function renderLoop() {
@@ -29,7 +27,7 @@ function renderLoop() {
 };
 
 function draw(universe: wasm.Universe ) {
-
+  
   // Read magnets from wasm memory
   const magnets_ptr = universe.magnets()
   const magnet_sizeof = wasm.Magnet.size_of()
@@ -45,8 +43,6 @@ function draw(universe: wasm.Universe ) {
     ctx.rect(magnet.pos.x+width/2, magnet.pos.y+height/2, 5, 5)
     ctx.fill();
 
-    // console.log("got magnet", magnet)
-
   }
 
   // Read pendulums from wasm memory
@@ -61,12 +57,10 @@ function draw(universe: wasm.Universe ) {
     let pendulum = getPendulum(dv_pendulums, pendulum_sizeof*i)
     // console.log("got pendulum", pendulum)
     ctx.beginPath();
-    ctx.fillStyle = "blue";
+    ctx.fillStyle = "white";
     ctx.rect(pendulum.pos.x+width/2, pendulum.pos.y+height/2, 5, 5)
     ctx.fill();
   }
-
-
 
 };
 
@@ -119,24 +113,3 @@ function getPendulum(dv: DataView, ptr: number) {
     isStationary
   );
 }
-
-// function getNum(buffer : ArrayBuffer, ptr: number, n: number) {
-//   let dv = new DataView(buffer, ptr, 16);
-//   // dv.setFloat64(ptr, Math.PI);
-//   let myArray = new Float64Array(memory.buffer, nums_ptr, 2);
-//   console.log(myArray)
-  
-//   let offset = 0;
-//   let i = 0;
-//   let ret = [];
-//   console.log(buffer.slice(offset, offset+8+1))
-//   console.log("bytelength is", buffer.byteLength, "offset is", offset)
-//   while (offset < buffer.byteLength && i < n) {
-//       let strength = dv.getFloat64(offset, true); offset += 8;
-//       console.log("strength is", strength)
-//       ret.push(strength);
-//       i += 1;
-//   }
-//   return ret;
-
-// }
