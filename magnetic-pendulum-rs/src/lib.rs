@@ -19,8 +19,8 @@ pub fn greet() {
     alert("Hello, magnetic-pendulum!");
 }
 
-const STEPS: u32 = 1000;
-const DELTA: f64 = 0.0001;
+const INIT_STEPS: u32 = 25000;
+const INIT_DELTA: f64 = 0.000001;
 
 // The radius of a magnet
 // if the distance between the pendulum and a magnet is below this value
@@ -115,6 +115,8 @@ pub struct Universe {
     /// the max iterations for computing the magnet associated with a pendulum
     max_iters: u32,
     nums: Vec<f64>,
+    steps: u32,
+    delta: f64,
 }
 
 #[wasm_bindgen]
@@ -134,6 +136,8 @@ impl Universe {
             magnets,
             max_iters,
             nums: vec![3.14; 1],
+            steps: INIT_STEPS,
+            delta: INIT_DELTA,
         }
     }
     /// Computes the tension force induced on a pendulum
@@ -159,6 +163,14 @@ impl Universe {
         self.nums.push(n as f64)
     }
 
+    pub fn create_magnet(&mut self, x: f64, y: f64, strength: f64) {
+        self.magnets.push(Magnet::new(Vec2D::new(x,y), strength));
+    }
+
+    pub fn create_pendulum(&mut self, x: f64, y: f64, tension: f64, friction: f64) {
+        self.pendulums.push(Pendulum::new(Vec2D::new(x,y), tension, friction));
+    }
+
     pub fn get_num(self, i: usize) -> f64 {
         self.nums[i]
     }
@@ -177,7 +189,7 @@ impl Universe {
 
     pub fn tick(&mut self) {
         for pendulum in self.pendulums.iter_mut() {
-            pendulum.tick(&self.magnets, self.width, self.height, STEPS, DELTA)
+            pendulum.tick(&self.magnets, self.width, self.height, self.steps, self.delta)
         }
     }
 
@@ -207,6 +219,14 @@ impl Universe {
 
     pub fn magnets_len(&self) -> u32 {
         self.magnets.len() as u32
+    }
+
+    pub fn set_steps(&mut self, new_steps: u32) {
+        self.steps = new_steps;
+    }
+
+    pub fn set_delta(&mut self, new_delta: f64) {
+        self.delta = new_delta;
     }
 }
 

@@ -252,7 +252,7 @@ eval("var logLevel = \"info\";\n\nfunction dummy() {}\n\nfunction shouldLog(leve
   \**************************/
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
-eval("\n// // A dependency graph that contains any wasm must all be imported\n// // asynchronously. This `bootstrap.js` file does the single async import, so\n// // that no one else needs to worry about it again.\n__webpack_require__.e(/*! import() */ \"src_index_ts\").then(__webpack_require__.bind(__webpack_require__, /*! ./index.ts */ \"./src/index.ts\"))\n  .catch(e => console.error(\"Error importing `index.ts`:\", e));\n\n\n// import * as wasm from \"magnetic-pendulum-wasm\"\n// import { memory } from \"magnetic-pendulum-wasm/magnetic_pendulum_bg.wasm\";\n\n// wasm.greet();\n// const universe = wasm.Universe.new(512,512,100);\n// const width = universe.width()\n// const height = universe.height()\n// const canvas = document.getElementById('magnetic-pendulum-canvas')\n// canvas.width = width;\n// canvas.height = height;\n\n// const ctx = canvas.getContext('2d');\n// ctx.fillStyle=\"#000000\"\n// // requestAnimationFrame(renderLoop)\n\n\n\n//# sourceURL=webpack://client-ts/./src/bootstrap.js?");
+eval("\n// // A dependency graph that contains any wasm must all be imported\n// // asynchronously. This `bootstrap.js` file does the single async import, so\n// // that no one else needs to worry about it again.\nPromise.all(/*! import() */[__webpack_require__.e(\"vendors-node_modules_dat_gui_build_dat_gui_module_js\"), __webpack_require__.e(\"src_index_ts\")]).then(__webpack_require__.bind(__webpack_require__, /*! ./index.ts */ \"./src/index.ts\"))\n  .catch(e => console.error(\"Error importing `index.ts`:\", e));\n\n\n// import * as wasm from \"magnetic-pendulum-wasm\"\n// import { memory } from \"magnetic-pendulum-wasm/magnetic_pendulum_bg.wasm\";\n\n// wasm.greet();\n// const universe = wasm.Universe.new(512,512,100);\n// const width = universe.width()\n// const height = universe.height()\n// const canvas = document.getElementById('magnetic-pendulum-canvas')\n// canvas.width = width;\n// canvas.height = height;\n\n// const ctx = canvas.getContext('2d');\n// ctx.fillStyle=\"#000000\"\n// // requestAnimationFrame(renderLoop)\n\n\n\n//# sourceURL=webpack://client-ts/./src/bootstrap.js?");
 
 /***/ })
 
@@ -435,7 +435,7 @@ eval("\n// // A dependency graph that contains any wasm must all be imported\n//
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("518508e046cf62b486da")
+/******/ 		__webpack_require__.h = () => ("23f4bc7ba007588c659b")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

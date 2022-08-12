@@ -4,11 +4,59 @@ import { memory } from "magnetic-pendulum-rs/magnetic_pendulum_rs_bg.wasm";
 import { exit } from "process";
 import { deflateRaw } from "zlib";
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
-// wasm.greet();
+import { GUI } from "dat.gui"
+
 const universe = new wasm.Universe(64,64,100);
 
-const width = universe.width()*50
-const height = universe.height()*50
+// wasm.greet();
+var state = {
+    type: 'pendulum',
+    tension: 0.8,
+    friction: 1.0,
+    show_trace: false,
+    steps: 25000,
+};
+
+var reset_button = { clear:function(){ 
+  console.log("cleared all"); 
+  universe.clear_magnets(); 
+  universe.clear_pendulums(); 
+  ctx.rect(0,0,width, height)
+  ctx.fillStyle="black"
+  ctx.fill()
+}};
+
+var gui = new GUI();
+gui.add(state, 'type', {'pendulum': 'pendulum', 'magnet': 'magnet', 'anti-magnet':'antimagnet'});
+gui.add(state, 'tension', 0, 5).name("Tension");
+gui.add(state, 'friction', 0, 1.0, 0.001).name("Friction");
+
+gui.add(state, 'steps', 0,50000).name("Render speed").onChange((new_steps : number) => {universe.set_steps(new_steps);});
+gui.add(state, 'show_trace').name("Show trace");
+gui.add(reset_button,'clear').name("Clear all");
+
+function canvas_to_universe_coords(canvas_x: number, canvas_y: number): [number, number] {
+    const x = canvas_x / width * universe.width()
+    const y = canvas_y / height * universe.height()
+    return [x,y]
+}
+
+function universe_to_canvas_coords(x: number, y: number) : [number, number] {
+  const canvas_x = x / universe.width() * width;
+  const canvas_y = y / universe.height() * height;
+  return [canvas_x, canvas_y]
+}
+
+function getCursorPosition(canvas: HTMLCanvasElement, event: MouseEvent) : [number, number] {
+    const rect = canvas.getBoundingClientRect()
+    const canvas_x = event.clientX - rect.left
+    const canvas_y = event.clientY - rect.top
+    const [x,y] : [number, number] = canvas_to_universe_coords(canvas_x, canvas_y)
+    return [x,y]
+}
+
+const width = universe.width()*20
+const height = universe.height()*20
 console.log(width,height)
 const canvas = <HTMLCanvasElement> document.getElementById('magnetic-pendulum-canvas')
 canvas.width = width;
@@ -17,6 +65,12 @@ canvas.height = height;
 const ctx = canvas.getContext('2d');
 ctx.fillStyle = "black";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+canvas.addEventListener('mousedown', function(e) {
+    const [x, y] : [number, number] = getCursorPosition(canvas, e)
+    universe.create_pendulum(x, y, state.tension, state.friction);
+})
+
 
 function renderLoop() {
   universe.tick();
@@ -38,9 +92,11 @@ function draw(universe: wasm.Universe ) {
   // Render magnets from wasm memory
   for (let i = 0; i < magnets_n; i++) {
     let magnet : Magnet = getMagnet(dv_magnets, i*magnet_sizeof);
+    const [canvas_x, canvas_y] = universe_to_canvas_coords(magnet.pos.x, magnet.pos.y);
+
     ctx.beginPath();
     ctx.fillStyle = "yellow";
-    ctx.rect(magnet.pos.x+width/2, magnet.pos.y+height/2, 5, 5)
+    ctx.rect(canvas_x, canvas_y, 5, 5)
     ctx.fill();
 
   }
@@ -54,11 +110,11 @@ function draw(universe: wasm.Universe ) {
 
   // Render pendulums from wasm memory
   for (let i = 0; i < pendulums_n; i++) {
-    let pendulum = getPendulum(dv_pendulums, pendulum_sizeof*i)
-    // console.log("got pendulum", pendulum)
+    const pendulum: Pendulum = getPendulum(dv_pendulums, pendulum_sizeof*i);
+    const [canvas_x, canvas_y] = universe_to_canvas_coords(pendulum.pos.x, pendulum.pos.y);
     ctx.beginPath();
     ctx.fillStyle = "white";
-    ctx.rect(pendulum.pos.x+width/2, pendulum.pos.y+height/2, 5, 5)
+    ctx.rect(canvas_x, canvas_y, 5, 5)
     ctx.fill();
   }
 
