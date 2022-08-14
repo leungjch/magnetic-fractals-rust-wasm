@@ -15,6 +15,9 @@ var state = {
     friction: 1.0,
     show_trace: false,
     steps: 25000,
+    magnet_strength: 0,
+    magnet_radius: 10,
+    emitter_interval: 50,
 };
 
 var reset_button = { clear:function(){ 
@@ -27,9 +30,15 @@ var reset_button = { clear:function(){
 }};
 
 var gui = new GUI();
-gui.add(state, 'type', {'pendulum': 'pendulum', 'magnet': 'magnet', 'anti-magnet':'antimagnet'});
-gui.add(state, 'tension', 0, 5).name("Tension");
-gui.add(state, 'friction', 0, 1.0, 0.001).name("Friction");
+gui.add(state, 'type', {'pendulum': 'pendulum', 'magnet': 'magnet', 'emitter':'emitter'});
+var pendulum_folder = gui.addFolder("Pendulum settings");
+pendulum_folder.add(state, 'tension', 0, 5).name("Tension");
+pendulum_folder.add(state, 'friction', 0, 1.0, 0.001).name("Friction");
+var magnet_folder = gui.addFolder("Magnet settings");
+magnet_folder.add(state, 'magnet_strength', -10, 10).name("Magnet strength")
+magnet_folder.add(state, "magnet_radius", 1, 100).name("Magnet radius")
+var emitter_folder = gui.addFolder("Emitter settings");
+emitter_folder.add(state, "emitter_interval", 5, 150, 5)
 
 gui.add(state, 'steps', 0,50000).name("Render speed").onChange((new_steps : number) => {universe.set_steps(new_steps);});
 gui.add(state, 'show_trace').name("Show trace");
@@ -68,8 +77,18 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 canvas.addEventListener('mousedown', function(e) {
     const [x, y] : [number, number] = getCursorPosition(canvas, e)
-    universe.create_pendulum(x, y, state.tension, state.friction);
+    if (state.type == "pendulum") {
+      universe.create_pendulum(x, y, state.tension, state.friction);
+    }
+    if (state.type == "magnet") {
+      universe.create_magnet(x,y,state.magnet_strength);
+    }
+
+    if (state.type == "emitter") {
+      universe.create_emitter(x,y,state.emitter_interval, state.friction, state.tension);
+    }
 })
+
 
 
 function renderLoop() {
@@ -82,6 +101,10 @@ function renderLoop() {
 
 function draw(universe: wasm.Universe ) {
   
+  // ctx.globalCompositeOperation = 'destination-over';
+  ctx.clearRect(0, 0, width, height); // clear canvas
+
+
   // Read magnets from wasm memory
   const magnets_ptr = universe.magnets()
   const magnet_sizeof = wasm.Magnet.size_of()
@@ -95,13 +118,12 @@ function draw(universe: wasm.Universe ) {
     const [canvas_x, canvas_y] = universe_to_canvas_coords(magnet.pos.x, magnet.pos.y);
 
     ctx.beginPath();
-    ctx.fillStyle = "yellow";
+    ctx.fillStyle = "blue";
     ctx.rect(canvas_x, canvas_y, 5, 5)
     ctx.fill();
-
   }
 
-  // Read pendulums from wasm memory
+  // Get pendulums info from wasm memory
   const pendulums_ptr = universe.pendulums()
   const pendulum_sizeof = wasm.Pendulum.size_of()
   const pendulums_n = universe.pendulums_len();
@@ -113,9 +135,17 @@ function draw(universe: wasm.Universe ) {
     const pendulum: Pendulum = getPendulum(dv_pendulums, pendulum_sizeof*i);
     const [canvas_x, canvas_y] = universe_to_canvas_coords(pendulum.pos.x, pendulum.pos.y);
     ctx.beginPath();
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "black";
     ctx.rect(canvas_x, canvas_y, 5, 5)
     ctx.fill();
+
+
+    // Show velocities
+    const [canvas_vel_x, canvas_vel_y] = universe_to_canvas_coords(pendulum.vel.x, pendulum.vel.y)
+    ctx.beginPath();
+    ctx.moveTo(canvas_x, canvas_y);
+    ctx.lineTo(canvas_x - canvas_vel_x/10, canvas_y - canvas_vel_y/10);
+    ctx.stroke();
   }
 
 };

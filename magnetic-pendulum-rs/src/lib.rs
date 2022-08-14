@@ -1,7 +1,7 @@
 mod utils;
 
-use wasm_bindgen::prelude::*;
 use std::mem;
+use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -29,7 +29,7 @@ const MAGNET_RADIUS: f64 = 0.1;
 
 #[wasm_bindgen]
 #[repr(C)]
-#[derive(Clone, Copy,Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Vec2D {
     pub x: f64,
     pub y: f64,
@@ -84,6 +84,7 @@ impl Default for Vec2D {
 
 #[wasm_bindgen]
 #[repr(C)]
+#[derive(Clone,Copy)]
 pub struct Rgb {
     r: u8,
     g: u8,
@@ -112,6 +113,7 @@ pub struct Universe {
     pendulums: Vec<Pendulum>,
     /// a vector of size > 1 where
     magnets: Vec<Magnet>,
+    emitters: Vec<Emitter>,
     /// the max iterations for computing the magnet associated with a pendulum
     max_iters: u32,
     nums: Vec<f64>,
@@ -124,16 +126,15 @@ impl Universe {
     #[wasm_bindgen(constructor)]
     pub fn new(width: u32, height: u32, max_iters: u32) -> Universe {
         // create some magnets
-        let magnets = vec![
-            Magnet::new(Vec2D::new(50.0,50.0), 100.05),
-            ];
-        let pendulums = vec![Pendulum::new(Vec2D::new(-50.0, 50.0), 1.0,1.0)];
+        let magnets = vec![];
+        let pendulums = vec![];
 
         Universe {
             width,
             height,
             pendulums,
             magnets,
+            emitters: vec![],
             max_iters,
             nums: vec![3.14; 1],
             steps: INIT_STEPS,
@@ -164,11 +165,17 @@ impl Universe {
     }
 
     pub fn create_magnet(&mut self, x: f64, y: f64, strength: f64) {
-        self.magnets.push(Magnet::new(Vec2D::new(x,y), strength));
+        self.magnets.push(Magnet::new(Vec2D::new(x, y), strength));
     }
 
     pub fn create_pendulum(&mut self, x: f64, y: f64, tension: f64, friction: f64) {
-        self.pendulums.push(Pendulum::new(Vec2D::new(x,y), tension, friction));
+        self.pendulums
+            .push(Pendulum::new(Vec2D::new(x, y), tension, friction));
+    }
+
+    pub fn create_emitter(&mut self, x: f64, y: f64, interval: u32, tension: f64, friction: f64) {
+        self.emitters
+            .push(Emitter::new(x, y, interval, tension, friction));
     }
 
     pub fn get_num(self, i: usize) -> f64 {
@@ -187,9 +194,38 @@ impl Universe {
         self.pendulums.clear();
     }
 
+    pub fn clear_emitters(&mut self) {
+        self.emitters.clear();
+    }
+
     pub fn tick(&mut self) {
+        // Emit pendulums from the emitters, if any
+        for emitter in self.emitters.iter_mut() {
+            emitter.tick();
+
+        }
+        let mut emits = vec![];
+
+        for emitter in self.emitters.iter() {
+            if emitter.clock == 0 {
+                emits.push((emitter.pos.x, emitter.pos.y, emitter.tension, emitter.friction));
+            }
+        }
+        for emit in emits {
+            self.create_pendulum(emit.0, emit.1, emit.2, emit.3)
+        }
+
+
+        
+        // Move the pendulums
         for pendulum in self.pendulums.iter_mut() {
-            pendulum.tick(&self.magnets, self.width, self.height, self.steps, self.delta)
+            pendulum.tick(
+                &self.magnets,
+                self.width,
+                self.height,
+                self.steps,
+                self.delta,
+            )
         }
     }
 
@@ -231,7 +267,6 @@ impl Universe {
 }
 
 impl Universe {
-
     pub fn get_pendulums(&self) -> &[Pendulum] {
         &self.pendulums
     }
@@ -241,8 +276,6 @@ impl Universe {
     }
 }
 
-#[repr(C)]
-#[wasm_bindgen]
 /*
 pos: 16 bytes
 strength: 8 bytes
@@ -250,6 +283,9 @@ color: 3 bytes
 padding
 total: 32 bytes
 */
+#[repr(C)]
+#[wasm_bindgen]
+#[derive(Clone, Copy)]
 pub struct Magnet {
     strength: f64,
     pos: Vec2D,
@@ -266,7 +302,7 @@ impl Magnet {
             color: Rgb::black(),
         }
     }
-    
+
     pub fn size_of() -> u32 {
         mem::size_of::<Magnet>() as u32
     }
@@ -340,6 +376,8 @@ impl Pendulum {
             } else {
                 self.pos = magnet.pos;
                 self.is_stationary = true;
+                self.vel = Vec2D::zero();
+                self.acc = Vec2D::zero();
                 return;
             }
         }
@@ -362,28 +400,73 @@ impl Pendulum {
 }
 
 #[wasm_bindgen]
-pub struct Image {
-    data: Vec<u8>,
+pub struct Emitter {
+    pos: Vec2D,
+    interval: u32,
+    // if clock is zero, then the universe will spawn
+    // a pendulum at that setting
+    pub clock: u32,
+    pub tension: f64,
+    pub friction: f64,
 }
 
 #[wasm_bindgen]
-impl Image {
-    pub fn new(length: usize) -> Image {
-        Image { data: vec![42; length] }
+impl Emitter {
+    pub fn new(x: f64, y: f64, interval: u32, tension: f64, friction: f64) -> Emitter {
+        Emitter {
+            pos: Vec2D::new(x, y),
+            interval,
+            clock: 0,
+            tension,
+            friction,
+        }
+    }
+    pub fn tick(&mut self) {
+        self.clock += 1;
+        self.clock %= self.interval;
+    }
+}
+
+#[wasm_bindgen]
+pub struct FractalImage {
+    image_width: usize,
+    image_height: usize,
+    image_data: Vec<Rgb>,
+    universe: Universe,
+}
+
+#[wasm_bindgen]
+impl FractalImage {
+    pub fn new(image_width: usize, image_height: usize, universe: Universe) -> FractalImage {
+        // Create a universe with only the magnets
+        let mut universe_copy = Universe::new(universe.width as u32, universe.height as u32, universe.max_iters);
+        universe_copy.magnets = universe.get_magnets().to_vec().clone();
+
+        FractalImage {
+            image_width,
+            image_height,
+            image_data: vec![Rgb::black(); image_width*image_height],
+            universe: universe_copy,
+        }
     }
 
-    pub fn get_pointer(&self) -> *const u8 {
-        self.data.as_ptr()
+    pub fn generate() {
+        
+    }
+
+    pub fn get_pointer(&self) -> *const Rgb {
+        self.image_data.as_ptr()
     }
 
     pub fn get_length(&self) -> usize {
-        self.data.len()
+        self.image_data.len()
     }
 
-    pub fn get_first_element(&self) -> u8 {
-        match self.data.get(0) {
+    pub fn get_first_element(&self) -> Rgb {
+        match self.image_data.get(0) {
             Some(v) => *v,
-            None => 0,
+            None => Rgb::black(),
         }
     }
 }
+ 
