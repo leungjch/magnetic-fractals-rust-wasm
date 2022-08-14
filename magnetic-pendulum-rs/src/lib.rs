@@ -2,6 +2,7 @@ mod utils;
 
 use std::mem;
 use wasm_bindgen::prelude::*;
+use rand::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -71,8 +72,25 @@ impl Vec2D {
     fn distance(lhs: Self, rhs: Self) -> f64 {
         f64::sqrt(Vec2D::distance_sqr(lhs, rhs))
     }
+
+    pub fn magnitude(v: Self) -> f64 {
+        f64::sqrt(f64::powi(v.x, 2) + f64::powi(v.y, 2))
+    }
+
     pub fn zero() -> Vec2D {
         Vec2D { x: 0.0, y: 0.0 }
+    }
+
+    pub fn convert_coords(
+        from_coords: Vec2D,
+        to_width: u32,
+        to_height: u32,
+        from_width: u32,
+        from_height: u32
+    ) -> Vec2D {
+        let x = from_coords.x / from_width as f64 * to_width as f64;
+        let y = from_coords.y / from_height as f64 * to_height as f64;
+        Vec2D::new(x, y)
     }
 }
 
@@ -84,7 +102,7 @@ impl Default for Vec2D {
 
 #[wasm_bindgen]
 #[repr(C)]
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct Rgb {
     r: u8,
     g: u8,
@@ -100,6 +118,9 @@ impl Rgb {
 
     fn black() -> Rgb {
         Rgb { r: 0, g: 0, b: 0 }
+    }
+    pub fn size_of() -> usize {
+        std::mem::size_of::<Rgb>()
     }
 }
 
@@ -202,21 +223,23 @@ impl Universe {
         // Emit pendulums from the emitters, if any
         for emitter in self.emitters.iter_mut() {
             emitter.tick();
-
         }
         let mut emits = vec![];
 
         for emitter in self.emitters.iter() {
             if emitter.clock == 0 {
-                emits.push((emitter.pos.x, emitter.pos.y, emitter.tension, emitter.friction));
+                emits.push((
+                    emitter.pos.x,
+                    emitter.pos.y,
+                    emitter.tension,
+                    emitter.friction,
+                ));
             }
         }
         for emit in emits {
             self.create_pendulum(emit.0, emit.1, emit.2, emit.3)
         }
 
-
-        
         // Move the pendulums
         for pendulum in self.pendulums.iter_mut() {
             pendulum.tick(
@@ -273,6 +296,14 @@ impl Universe {
 
     pub fn get_magnets(&self) -> &[Magnet] {
         &self.magnets
+    }
+
+    pub fn get_width(&self) -> &u32 {
+        &self.width
+    }
+
+    pub fn get_height(&self) -> &u32 {
+        &self.height
     }
 }
 
@@ -428,31 +459,75 @@ impl Emitter {
 }
 
 #[wasm_bindgen]
-pub struct FractalImage {
+pub struct FractalGenerator {
     image_width: usize,
     image_height: usize,
     image_data: Vec<Rgb>,
-    universe: Universe,
 }
 
 #[wasm_bindgen]
-impl FractalImage {
-    pub fn new(image_width: usize, image_height: usize, universe: Universe) -> FractalImage {
-        // Create a universe with only the magnets
-        let mut universe_copy = Universe::new(universe.width as u32, universe.height as u32, universe.max_iters);
-        universe_copy.magnets = universe.get_magnets().to_vec().clone();
+impl FractalGenerator {
+    #[wasm_bindgen(constructor)]
+    pub fn new(image_width: usize, image_height: usize) -> FractalGenerator {
+        // Create a copy universe with only the magnets
 
-        FractalImage {
+        FractalGenerator {
             image_width,
             image_height,
-            image_data: vec![Rgb::black(); image_width*image_height],
-            universe: universe_copy,
+            image_data: vec![Rgb::black(); image_width * image_height],
         }
     }
 
-    pub fn generate() {
-        
+    pub fn get_width(&self) -> usize {
+        self.image_width
     }
+
+    pub fn get_height(&self) -> usize {
+        self.image_height
+    }
+
+    pub fn generate(&mut self, universe: &Universe, k: f64, friction: f64) {
+        for i in 0..self.image_height {
+            for j in 0..self.image_width {
+                let pendulum_pos = Vec2D::convert_coords(
+                    Vec2D::new(j as f64, i as f64),
+                    universe.width,
+                    universe.height,
+                    self.image_width as u32,
+                    self.image_height as u32,
+                );
+                assert!(universe.magnets.len() > 0);
+                // Create a pendulum
+                let mut p = Pendulum::new(pendulum_pos, k, friction);
+                // Loop until max iters
+                let mut iter = 0;
+                while iter < universe.max_iters {
+                    p.tick(
+                        &universe.magnets,
+                        universe.width,
+                        universe.height,
+                        universe.steps,
+                        universe.delta,
+                    );
+                    // If p reached a magnet, do early break
+                    if p.is_stationary {
+                        break;
+                    }
+                    iter += 1;
+                }
+                if !p.is_stationary {
+                    iter = 255;
+                }
+                let col: u8 = (iter%255) as u8;
+                let rgb = Rgb::new(col,col,col);
+                let r : u8 = random();
+
+                // let rgb = Rgb::new(r,r,r);
+                self.image_data[i*self.image_width + j] = rgb;
+            }
+        }
+    }
+
 
     pub fn get_pointer(&self) -> *const Rgb {
         self.image_data.as_ptr()
@@ -469,4 +544,3 @@ impl FractalImage {
         }
     }
 }
- 
