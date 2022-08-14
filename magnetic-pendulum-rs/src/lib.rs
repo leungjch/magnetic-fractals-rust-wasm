@@ -515,11 +515,13 @@ impl FractalGenerator {
                     }
                     iter += 1;
                 }
-                if !p.is_stationary {
-                    iter = 255;
-                }
                 let col: u8 = (iter%255) as u8;
-                let rgb = Rgb::new(col,col,col);
+                let mut rgb = Rgb::new(col,col,col);
+                if !p.is_stationary {
+                    rgb.r = 255;
+                    rgb.b = 255;
+                    rgb.g = 255;
+                }
                 let r : u8 = random();
 
                 // let rgb = Rgb::new(r,r,r);

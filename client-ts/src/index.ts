@@ -6,7 +6,7 @@ import { deflateRaw } from "zlib";
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import { GUI } from "dat.gui"
 import { createJsxText } from "typescript";
-let UNIVERSE_WIDTH = 64;
+let UNIVERSE_WIDTH = 128;
 const universe = new wasm.Universe(64, 64, 100);
 const fractal_generator = new wasm.FractalGenerator(UNIVERSE_WIDTH, UNIVERSE_WIDTH);
 
@@ -17,7 +17,7 @@ var state = {
   show_velocity: false,
   show_tension: false,
   steps: 25000,
-  magnet_strength: 0,
+  magnet_strength: 50,
   magnet_radius: 10,
   emitter_interval: 50,
   show_fractal: false,
@@ -47,7 +47,7 @@ var pendulum_folder = gui.addFolder("Pendulum settings");
 pendulum_folder.add(state, 'tension', 0, 5).name("Tension");
 pendulum_folder.add(state, 'friction', 0, 1.0, 0.001).name("Friction");
 var magnet_folder = gui.addFolder("Magnet settings");
-magnet_folder.add(state, 'magnet_strength', -10, 10).name("Magnet strength")
+magnet_folder.add(state, 'magnet_strength', -100, 100).name("Magnet strength")
 magnet_folder.add(state, "magnet_radius", 1, 100).name("Magnet radius")
 var emitter_folder = gui.addFolder("Emitter settings");
 emitter_folder.add(state, "emitter_interval", 5, 150, 5)
