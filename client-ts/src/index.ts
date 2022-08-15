@@ -6,21 +6,24 @@ import { deflateRaw } from "zlib";
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import { GUI } from "dat.gui"
 import { createJsxText } from "typescript";
-let UNIVERSE_WIDTH = 128;
-const universe = new wasm.Universe(64, 64, 1000);
-const fractal_generator = new wasm.FractalGenerator(UNIVERSE_WIDTH, UNIVERSE_WIDTH);
-
+let FRACTAL_SIZE = 512;
+const universe = new wasm.Universe(64, 64, 500);
+const width = universe.width() * 20
+const height = universe.height() * 20
+const fractal_generator = new wasm.FractalGenerator(FRACTAL_SIZE, FRACTAL_SIZE);
+let fractal_background : ImageData = new ImageData(width, height);
 var state = {
   type: 'pendulum',
   tension: 0.8,
   friction: 1.0,
+  mass: 1.0,
   show_velocity: false,
   show_tension: false,
-  steps: 25000,
+  steps: 50,
   magnet_strength: 50,
   magnet_radius: 2,
   emitter_interval: 50,
-  show_fractal: false,
+  show_fractal: true,
 };
 
 var reset_button = {
@@ -37,7 +40,7 @@ var reset_button = {
 
 var generate_fractal_button = {
   generate_fractal: function () {
-    fractal_generator.generate(universe, state.tension, state.friction)
+    fractal_generator.generate(universe, state.tension, state.friction, state.mass)
     console.log("done")
   }
 }
@@ -45,6 +48,7 @@ var generate_fractal_button = {
 var gui = new GUI();
 gui.add(state, 'type', { 'pendulum': 'pendulum', 'magnet': 'magnet', 'emitter': 'emitter' });
 var pendulum_folder = gui.addFolder("Pendulum settings");
+pendulum_folder.add(state, 'mass', 0.01, 10.0).name("Mass");
 pendulum_folder.add(state, 'tension', 0, 5).name("Tension");
 pendulum_folder.add(state, 'friction', 0, 1.0, 0.001).name("Friction");
 var magnet_folder = gui.addFolder("Magnet settings");
@@ -53,7 +57,7 @@ magnet_folder.add(state, "magnet_radius", 1, 10, 0.1).name("Magnet radius")
 var emitter_folder = gui.addFolder("Emitter settings");
 emitter_folder.add(state, "emitter_interval", 5, 150, 5)
 
-gui.add(state, 'steps', 0, 100000).name("Render speed").onChange((new_steps: number) => { universe.set_steps(new_steps); });
+gui.add(state, 'steps', 0, 200).name("Render speed").onChange((new_steps: number) => { universe.set_steps(new_steps); });
 gui.add(state, "show_velocity").name("Show velocity")
 gui.add(state, "show_tension").name("Show tension")
 gui.add(state, "show_fractal").name("Show fractal")
@@ -80,8 +84,6 @@ function getCursorPosition(canvas: HTMLCanvasElement, event: MouseEvent): [numbe
   return [x, y]
 }
 
-const width = universe.width() * 20
-const height = universe.height() * 20
 console.log(width, height)
 const canvas = <HTMLCanvasElement>document.getElementById('magnetic-pendulum-canvas')
 canvas.width = width;
@@ -94,28 +96,32 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 canvas.addEventListener('mousedown', function (e) {
   const [x, y]: [number, number] = getCursorPosition(canvas, e)
   if (state.type == "pendulum") {
-    universe.create_pendulum(x, y, state.tension, state.friction);
+    universe.create_pendulum(x, y, state.tension, state.friction, state.mass);
   }
   if (state.type == "magnet") {
     universe.create_magnet(x, y, state.magnet_strength, state.magnet_radius);
   }
 
   if (state.type == "emitter") {
-    universe.create_emitter(x, y, state.emitter_interval, state.friction, state.tension);
+    universe.create_emitter(x, y, state.emitter_interval, state.friction, state.tension, state.mass);
   }
 })
 
 
 
+let t = 0;
 function renderLoop() {
   universe.tick();
 
-  draw(universe);
+  draw(universe, t);
+  t += 1;
+  t %= 120;
 
   requestAnimationFrame(renderLoop);
 };
 
-function draw(universe: wasm.Universe) {
+function draw(universe: wasm.Universe, t: number) {
+  
 
   // ctx.globalCompositeOperation = 'destination-over';
   ctx.clearRect(0, 0, width, height); // clear canvas
@@ -129,7 +135,8 @@ function draw(universe: wasm.Universe) {
   console.log("pendulums", pendulums_n)
 
   // Render the fractal as a background
-  if (state.show_fractal) {
+  // Trick to save rendering speed: only render background when t MOD x == 0 for some x
+  if (state.show_fractal && t == 0) {
     const img_ptr = fractal_generator.get_pointer()
     const rgb_sizeof = wasm.Rgb.size_of()
     const img_len = fractal_generator.get_length();
@@ -142,11 +149,15 @@ function draw(universe: wasm.Universe) {
       for (let j = 0; j < fractal_width; j++) {
         let rgb = getRgb(dv_img, rgb_sizeof * (i*fractal_width+j));
         ctx.fillStyle=rgb.to_string();
+        ctx.strokeStyle = "rgba(1, 1, 1, 0)";
         ctx.fillRect(j*pixel_width,i*pixel_width,pixel_width,pixel_width)
 
       }
     }
+    // save the background so that we do not have to redraw/read from wasm memory each frame
+    fractal_background = ctx.getImageData(0,0,width, height);
   }
+  ctx.putImageData(fractal_background, 0, 0);
 
   // Read magnets from wasm memory
   const magnets_ptr = universe.magnets()
@@ -161,6 +172,7 @@ function draw(universe: wasm.Universe) {
     const [canvas_x, canvas_y] = universe_to_canvas_coords(magnet.pos.x, magnet.pos.y);
 
     ctx.beginPath();
+    ctx.strokeStyle = "rgba(1, 1, 1, 1)";
     ctx.fillStyle = magnet.color.to_string();
     ctx.arc(canvas_x, canvas_y, magnet.radius*20, 0, Math.PI*2)
     ctx.fill();
@@ -228,6 +240,7 @@ function getPendulum(dv: DataView, ptr: number) {
   let vel_y = dv.getFloat64(offset, true); offset += 8;
   let acc_x = dv.getFloat64(offset, true); offset += 8;
   let acc_y = dv.getFloat64(offset, true); offset += 8;
+  let mass = dv.getFloat64(offset, true); offset += 8;
   let ten_x = dv.getFloat64(offset, true); offset += 8;
   let ten_y = dv.getFloat64(offset, true); offset += 8;
   let k = dv.getFloat64(offset, true); offset += 8;
@@ -245,6 +258,7 @@ function getPendulum(dv: DataView, ptr: number) {
     new Vec2D(pos_x, pos_y),
     new Vec2D(vel_x, vel_y),
     new Vec2D(acc_x, acc_y),
+    mass,
     new Vec2D(ten_x, ten_y),
     k,
     friction,

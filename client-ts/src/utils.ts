@@ -41,6 +41,7 @@ export class Pendulum {
     pos: Vec2D;
     vel: Vec2D;
     acc: Vec2D;
+    mass: number;
     f_tension: Vec2D;
     k: number;
     friction: number;
@@ -53,6 +54,7 @@ export class Pendulum {
         pos: Vec2D,
         vel: Vec2D,
         acc: Vec2D,
+        mass: number,
         f_tension: Vec2D,
         k: number,
         friction: number,
@@ -65,6 +67,7 @@ export class Pendulum {
             this.pos = pos;
             this.vel = vel;
             this.acc = acc;
+            this.mass = mass;
             this.f_tension = f_tension;
             this.k = k
             this.friction = friction;
