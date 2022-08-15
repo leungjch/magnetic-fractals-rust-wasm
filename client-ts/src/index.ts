@@ -7,7 +7,7 @@ import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import { GUI } from "dat.gui"
 import { createJsxText } from "typescript";
 let UNIVERSE_WIDTH = 128;
-const universe = new wasm.Universe(64, 64, 100);
+const universe = new wasm.Universe(64, 64, 1000);
 const fractal_generator = new wasm.FractalGenerator(UNIVERSE_WIDTH, UNIVERSE_WIDTH);
 
 var state = {
@@ -18,7 +18,7 @@ var state = {
   show_tension: false,
   steps: 25000,
   magnet_strength: 50,
-  magnet_radius: 10,
+  magnet_radius: 2,
   emitter_interval: 50,
   show_fractal: false,
 };
@@ -28,6 +28,7 @@ var reset_button = {
     console.log("cleared all");
     universe.clear_magnets();
     universe.clear_pendulums();
+    universe.clear_emitters();
     ctx.rect(0, 0, width, height)
     ctx.fillStyle = "black"
     ctx.fill()
@@ -47,12 +48,12 @@ var pendulum_folder = gui.addFolder("Pendulum settings");
 pendulum_folder.add(state, 'tension', 0, 5).name("Tension");
 pendulum_folder.add(state, 'friction', 0, 1.0, 0.001).name("Friction");
 var magnet_folder = gui.addFolder("Magnet settings");
-magnet_folder.add(state, 'magnet_strength', -100, 100).name("Magnet strength")
-magnet_folder.add(state, "magnet_radius", 1, 100).name("Magnet radius")
+magnet_folder.add(state, 'magnet_strength', -500, 500).name("Magnet strength")
+magnet_folder.add(state, "magnet_radius", 1, 10, 0.1).name("Magnet radius")
 var emitter_folder = gui.addFolder("Emitter settings");
 emitter_folder.add(state, "emitter_interval", 5, 150, 5)
 
-gui.add(state, 'steps', 0, 50000).name("Render speed").onChange((new_steps: number) => { universe.set_steps(new_steps); });
+gui.add(state, 'steps', 0, 100000).name("Render speed").onChange((new_steps: number) => { universe.set_steps(new_steps); });
 gui.add(state, "show_velocity").name("Show velocity")
 gui.add(state, "show_tension").name("Show tension")
 gui.add(state, "show_fractal").name("Show fractal")
@@ -96,7 +97,7 @@ canvas.addEventListener('mousedown', function (e) {
     universe.create_pendulum(x, y, state.tension, state.friction);
   }
   if (state.type == "magnet") {
-    universe.create_magnet(x, y, state.magnet_strength);
+    universe.create_magnet(x, y, state.magnet_strength, state.magnet_radius);
   }
 
   if (state.type == "emitter") {
@@ -120,6 +121,33 @@ function draw(universe: wasm.Universe) {
   ctx.clearRect(0, 0, width, height); // clear canvas
 
 
+  // Get pendulums info from wasm memory
+  const pendulums_ptr = universe.pendulums()
+  const pendulum_sizeof = wasm.Pendulum.size_of()
+  const pendulums_n = universe.pendulums_len();
+  let dv_pendulums = new DataView(memory.buffer, pendulums_ptr, pendulums_n * pendulum_sizeof);
+  console.log("pendulums", pendulums_n)
+
+  // Render the fractal as a background
+  if (state.show_fractal) {
+    const img_ptr = fractal_generator.get_pointer()
+    const rgb_sizeof = wasm.Rgb.size_of()
+    const img_len = fractal_generator.get_length();
+    let dv_img = new DataView(memory.buffer, img_ptr, img_len * rgb_sizeof);
+    // Get image data
+    let fractal_width = fractal_generator.get_width();
+    let fractal_height = fractal_generator.get_height();
+    let pixel_width = width / fractal_width;
+    for (let i = 0; i < fractal_height; i++) {
+      for (let j = 0; j < fractal_width; j++) {
+        let rgb = getRgb(dv_img, rgb_sizeof * (i*fractal_width+j));
+        ctx.fillStyle=rgb.to_string();
+        ctx.fillRect(j*pixel_width,i*pixel_width,pixel_width,pixel_width)
+
+      }
+    }
+  }
+
   // Read magnets from wasm memory
   const magnets_ptr = universe.magnets()
   const magnet_sizeof = wasm.Magnet.size_of()
@@ -133,17 +161,11 @@ function draw(universe: wasm.Universe) {
     const [canvas_x, canvas_y] = universe_to_canvas_coords(magnet.pos.x, magnet.pos.y);
 
     ctx.beginPath();
-    ctx.fillStyle = "blue";
-    ctx.rect(canvas_x, canvas_y, 5, 5)
+    ctx.fillStyle = magnet.color.to_string();
+    ctx.arc(canvas_x, canvas_y, magnet.radius*20, 0, Math.PI*2)
     ctx.fill();
+    ctx.stroke();
   }
-
-  // Get pendulums info from wasm memory
-  const pendulums_ptr = universe.pendulums()
-  const pendulum_sizeof = wasm.Pendulum.size_of()
-  const pendulums_n = universe.pendulums_len();
-  let dv_pendulums = new DataView(memory.buffer, pendulums_ptr, pendulums_n * pendulum_sizeof);
-
 
   // Render pendulums from wasm memory
   for (let i = 0; i < pendulums_n; i++) {
@@ -163,8 +185,9 @@ function draw(universe: wasm.Universe) {
       ctx.stroke();
       ctx.lineWidth = 1;
     }
+
+    // Show velocities
     if (state.show_velocity) {
-      // Show velocities
       const [canvas_vel_x, canvas_vel_y] = universe_to_canvas_coords(pendulum.vel.x, pendulum.vel.y)
       ctx.beginPath();
       ctx.moveTo(canvas_x, canvas_y);
@@ -173,26 +196,6 @@ function draw(universe: wasm.Universe) {
     }
   }
 
-  if (state.show_fractal) {
-
-    const img_ptr = fractal_generator.get_pointer()
-    const rgb_sizeof = wasm.Rgb.size_of()
-    const img_len = fractal_generator.get_length();
-    let dv_img = new DataView(memory.buffer, img_ptr, img_len * rgb_sizeof);
-    // Get image data
-    let fractal_width = fractal_generator.get_width();
-    let fractal_height = fractal_generator.get_height();
-    let pixel_width = width / fractal_width;
-    for (let i = 0; i < fractal_height; i++) {
-      for (let j = 0; j < fractal_width; j++) {
-        let rgb = getRgb(dv_img, rgb_sizeof * (i*fractal_width+j));
-        ctx.fillStyle=rgb.to_string();
-        ctx.fillRect(j*pixel_width,i*pixel_width,pixel_width,pixel_width)
-
-      // console.log(rgb)
-      }
-    }
-  }
 
 };
 
@@ -203,12 +206,14 @@ function getMagnet(dv: DataView, ptr: number) {
   let strength = dv.getFloat64(offset, true); offset += 8;
   let pos_x = dv.getFloat64(offset, true); offset += 8;
   let pos_y = dv.getFloat64(offset, true); offset += 8;
+  let radius = dv.getFloat64(offset, true); offset += 8;
   let color_r = dv.getUint8(offset); offset += 1;
   let color_g = dv.getUint8(offset); offset += 1;
   let color_b = dv.getUint8(offset); offset += 1;
   return new Magnet(
     strength,
     new Vec2D(pos_x, pos_y),
+    radius,
     new Rgb(color_r, color_g, color_b)
   )
 }
@@ -232,6 +237,9 @@ function getPendulum(dv: DataView, ptr: number) {
   let fnet_x = dv.getFloat64(offset, true); offset += 8;
   let fnet_y = dv.getFloat64(offset, true); offset += 8;
   let isStationary = dv.getUint8(offset) == 1 ? true : false; offset += 1;
+  let color_r = dv.getUint8(offset); offset += 1;
+  let color_g = dv.getUint8(offset); offset += 1;
+  let color_b = dv.getUint8(offset); offset += 1;
   return new Pendulum(
     new Vec2D(pos_start_x, pos_start_y),
     new Vec2D(pos_x, pos_y),
@@ -242,7 +250,8 @@ function getPendulum(dv: DataView, ptr: number) {
     friction,
     new Vec2D(mag_x, mag_y),
     new Vec2D(fnet_x, fnet_y),
-    isStationary
+    isStationary,
+    new Rgb(color_r,color_g,color_b),
   );
 }
 

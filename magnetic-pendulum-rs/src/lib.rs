@@ -1,8 +1,9 @@
+
 mod utils;
 
+use rand::prelude::*;
 use std::mem;
 use wasm_bindgen::prelude::*;
-use rand::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -23,10 +24,6 @@ pub fn greet() {
 const INIT_STEPS: u32 = 25000;
 const INIT_DELTA: f64 = 0.000001;
 
-// The radius of a magnet
-// if the distance between the pendulum and a magnet is below this value
-// then it is considered to be absorbed by the magnet.
-const MAGNET_RADIUS: f64 = 0.1;
 
 #[wasm_bindgen]
 #[repr(C)]
@@ -86,7 +83,7 @@ impl Vec2D {
         to_width: u32,
         to_height: u32,
         from_width: u32,
-        from_height: u32
+        from_height: u32,
     ) -> Vec2D {
         let x = from_coords.x / from_width as f64 * to_width as f64;
         let y = from_coords.y / from_height as f64 * to_height as f64;
@@ -115,12 +112,50 @@ impl Rgb {
     pub fn new(r: u8, g: u8, b: u8) -> Rgb {
         Rgb { r, g, b }
     }
-
+    fn white() -> Rgb {
+        Rgb { r: 255, g: 255, b: 255 }
+    }
     fn black() -> Rgb {
         Rgb { r: 0, g: 0, b: 0 }
     }
+
+    fn red() -> Rgb {
+        Rgb { r: 255, g: 0, b: 0 }
+    }
+    fn green() -> Rgb {
+        Rgb { r: 0, g: 255, b: 0 }
+    }
+    fn blue() -> Rgb {
+        Rgb { r: 0, g: 0, b: 255 }
+    }
     pub fn size_of() -> usize {
         std::mem::size_of::<Rgb>()
+    }
+    pub fn mix_pastel(mix: Rgb) -> Rgb {
+        let red = mix.r as f64;
+        let green = mix.g as f64;
+        let blue = mix.b as f64;
+        return Rgb{
+            r: ((red+255.0)/2.0) as u8,
+            g: ((green+255.0)/2.0) as u8,
+            b: ((blue+255.0)/2.0) as u8,
+        }
+    }
+    
+    pub fn mix_blacken(mix: Rgb) -> Rgb {
+        let red = mix.r as f64;
+        let green = mix.g as f64;
+        let blue = mix.b as f64;
+        return Rgb{
+            r: ((red+0.0)/2.0) as u8,
+            g: ((green+0.0)/2.0) as u8,
+            b: ((blue+0.0)/2.0) as u8,
+        }
+    }
+    // Generate a random pastel colour
+    pub fn random_pastel() -> Rgb {
+    let (r,g,b) : (u8, u8, u8) = (random(), random(), random());
+    Rgb::mix_pastel(Rgb{r,g,b})
     }
 }
 
@@ -147,7 +182,20 @@ impl Universe {
     #[wasm_bindgen(constructor)]
     pub fn new(width: u32, height: u32, max_iters: u32) -> Universe {
         // create some magnets
-        let magnets = vec![];
+        let magnets = vec![
+            Magnet::new(Vec2D::new(width as f64/3.0, height as f64/2.0),
+            100.0,
+            2.0,
+        ),
+            Magnet::new(Vec2D::new(width as f64/3.0*2.0, height as f64/2.0),
+            100.0,
+            2.0,
+        ),
+            Magnet::new(Vec2D::new(width as f64/2.0, height as f64/3.0),
+            100.0,
+            2.0,
+        )
+        ];
         let pendulums = vec![];
 
         Universe {
@@ -185,8 +233,8 @@ impl Universe {
         self.nums.push(n as f64)
     }
 
-    pub fn create_magnet(&mut self, x: f64, y: f64, strength: f64) {
-        self.magnets.push(Magnet::new(Vec2D::new(x, y), strength));
+    pub fn create_magnet(&mut self, x: f64, y: f64, strength: f64, radius: f64) {
+        self.magnets.push(Magnet::new(Vec2D::new(x, y), strength, radius));
     }
 
     pub fn create_pendulum(&mut self, x: f64, y: f64, tension: f64, friction: f64) {
@@ -242,14 +290,19 @@ impl Universe {
 
         // Move the pendulums
         for pendulum in self.pendulums.iter_mut() {
-            pendulum.tick(
-                &self.magnets,
-                self.width,
-                self.height,
-                self.steps,
-                self.delta,
-            )
+                pendulum.tick(
+                    &self.magnets,
+                    self.width,
+                    self.height,
+                    self.steps,
+                    self.delta,
+                );
         }
+
+        // Delete any pendulums that are stationary
+        self.pendulums.retain(|p| {
+            !p.is_stationary
+        });
     }
 
     pub fn width(&self) -> u32 {
@@ -320,17 +373,19 @@ total: 32 bytes
 pub struct Magnet {
     strength: f64,
     pos: Vec2D,
+    radius: f64,
     color: Rgb, // rgb
 }
 
 #[wasm_bindgen]
 impl Magnet {
     #[wasm_bindgen(constructor)]
-    pub fn new(pos: Vec2D, strength: f64) -> Magnet {
+    pub fn new(pos: Vec2D, strength: f64, radius: f64) -> Magnet {
         Magnet {
             pos,
             strength,
-            color: Rgb::black(),
+            radius,
+            color: Rgb::random_pastel(),
         }
     }
 
@@ -359,6 +414,7 @@ pub struct Pendulum {
 
     // The magnet that it attracts to at pos_start
     is_stationary: bool,
+    magnet_color: Rgb,
 }
 
 #[wasm_bindgen]
@@ -375,6 +431,7 @@ impl Pendulum {
             k,
             friction,
             is_stationary: false,
+            magnet_color: Rgb::black(),
         }
     }
 
@@ -400,7 +457,7 @@ impl Pendulum {
 
         for magnet in magnets.iter() {
             // Check if the pendulum is pulled into the magnet
-            if Vec2D::distance_sqr(magnet.pos, self.pos) > MAGNET_RADIUS {
+            if Vec2D::distance(magnet.pos, self.pos) > magnet.radius {
                 self.f_magnetic = self.f_magnetic + Universe::compute_magnetic_force(magnet, self);
 
             // Pendulum is pulled into magnet
@@ -409,6 +466,8 @@ impl Pendulum {
                 self.is_stationary = true;
                 self.vel = Vec2D::zero();
                 self.acc = Vec2D::zero();
+                // Record the magnet's colour
+                self.magnet_color = magnet.color.clone();
                 return;
             }
         }
@@ -474,7 +533,7 @@ impl FractalGenerator {
         FractalGenerator {
             image_width,
             image_height,
-            image_data: vec![Rgb::black(); image_width * image_height],
+            image_data: vec![Rgb::white(); image_width * image_height],
         }
     }
 
@@ -515,21 +574,23 @@ impl FractalGenerator {
                     }
                     iter += 1;
                 }
-                let col: u8 = (iter%255) as u8;
-                let mut rgb = Rgb::new(col,col,col);
+                let mut rgb =  p.magnet_color.clone();
+                // The longer the pendulum took to attract to a magnet,
+                // the lighter the colour
+                for _ in 0..u32::min(25, iter/10) {
+                    rgb = Rgb::mix_blacken(rgb);
+                }
                 if !p.is_stationary {
                     rgb.r = 255;
                     rgb.b = 255;
                     rgb.g = 255;
                 }
-                let r : u8 = random();
 
                 // let rgb = Rgb::new(r,r,r);
-                self.image_data[i*self.image_width + j] = rgb;
+                self.image_data[i * self.image_width + j] = rgb;
             }
         }
     }
-
 
     pub fn get_pointer(&self) -> *const Rgb {
         self.image_data.as_ptr()

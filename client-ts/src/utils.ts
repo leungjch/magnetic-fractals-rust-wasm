@@ -25,11 +25,13 @@ export class Vec2D {
 export class Magnet {
     strength: number;
     pos: Vec2D;
+    radius: number;
     color: Rgb;
 
-    constructor(strength: number, pos: Vec2D, color: Rgb) {
+    constructor(strength: number, pos: Vec2D, radius: number, color: Rgb) {
         this.strength = strength;
         this.pos = pos;
+        this.radius = radius
         this.color = color;
     }
 }
@@ -45,6 +47,7 @@ export class Pendulum {
     f_magnetic: Vec2D;
     f_net: Vec2D;
     is_stationary: boolean;
+    magnet_color: Rgb;
     
     constructor(pos_start: Vec2D,
         pos: Vec2D,
@@ -56,6 +59,7 @@ export class Pendulum {
         f_magnetic: Vec2D,
         f_net: Vec2D,
         is_stationary: boolean,
+        magnet_color: Rgb,
         ) {
             this.pos_start = pos_start;
             this.pos = pos;
@@ -67,5 +71,6 @@ export class Pendulum {
             this.f_magnetic = f_magnetic;
             this.f_net = f_net;
             this.is_stationary = is_stationary;
+            this.magnet_color = magnet_color;
         }
 }
