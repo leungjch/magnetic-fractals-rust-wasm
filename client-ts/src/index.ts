@@ -1,11 +1,8 @@
 
 import * as wasm from "magnetic-pendulum-rs"
 import { memory } from "magnetic-pendulum-rs/magnetic_pendulum_rs_bg.wasm";
-import { exit } from "process";
-import { deflateRaw } from "zlib";
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import { GUI } from "dat.gui"
-import { createJsxText, updateLanguageServiceSourceFile } from "typescript";
 let FRACTAL_SIZE = 512;
 const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * 20
@@ -28,7 +25,6 @@ var state = {
 
 var reset_button = {
   clear: function () {
-    console.log("cleared all");
     universe.clear_magnets();
     universe.clear_pendulums();
     universe.clear_emitters();
