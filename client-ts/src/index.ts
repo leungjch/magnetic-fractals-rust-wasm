@@ -209,7 +209,6 @@ function update_fractal_background() {
   fractal_background = ctx.getImageData(0, 0, width, height);
 }
 
-requestAnimationFrame(renderLoop);
 
 function getMagnet(dv: DataView, ptr: number) {
   let offset = ptr;
@@ -274,3 +273,8 @@ function getRgb(dv: DataView, ptr: number) {
   let color_b = dv.getUint8(offset); offset += 1;
   return new Rgb(color_r, color_g, color_b);
 }
+
+// Render the fractal for the first time
+generate_fractal_button.generate_fractal();
+// Run the render loop
+requestAnimationFrame(renderLoop);
