@@ -2,11 +2,14 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const path = require('path');
 
 module.exports = {
-  entry: "./src/bootstrap.js",
+  entry: {
+    app: "./src/index.ts",
+  },
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "bundle.js",
    },
+  mode: "development",
   module: {
     rules: [
       {
@@ -14,13 +17,8 @@ module.exports = {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
-      {
-          test: /\.wasm$/,
-          type: "asset/inline",
-      },
     ],
   },
-  mode: "development",
   plugins: [
     new CopyWebpackPlugin(
         {
@@ -36,6 +34,17 @@ module.exports = {
   devServer: {
       historyApiFallback: {
         index: '/dist'
+      },
+      client: {
+        overlay: {
+          warnings: false,
+          errors: true
+        },
+      },
+
+      headers: {
+       "Cross-Origin-Embedder-Policy": "require-corp",
+       "Cross-Origin-Opener-Policy": "same-origin" 
       },
       devMiddleware: { writeToDisk: true }
   },

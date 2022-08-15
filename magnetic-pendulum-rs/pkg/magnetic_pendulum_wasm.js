@@ -1,3 +1,4 @@
+import { startWorkers } from './snippets/wasm-bindgen-rayon-7afa899f36665473/src/workerHelpers.js';
 
 let wasm;
 
@@ -52,6 +53,34 @@ export function greet() {
     wasm.greet();
 }
 
+let cachedUint32Memory0 = new Uint32Array();
+
+function getUint32Memory0() {
+    if (cachedUint32Memory0.buffer !== wasm.memory.buffer) {
+        cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
+    }
+    return cachedUint32Memory0;
+}
+
+let WASM_VECTOR_LEN = 0;
+
+function passArray32ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 4);
+    getUint32Memory0().set(arg, ptr / 4);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+/**
+* @param {Int32Array} numbers
+* @returns {number}
+*/
+export function sum_of_squares(numbers) {
+    const ptr0 = passArray32ToWasm0(numbers, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.sum_of_squares(ptr0, len0);
+    return ret;
+}
+
 function _assertClass(instance, klass) {
     if (!(instance instanceof klass)) {
         throw new Error(`expected instance of ${klass.name}`);
@@ -70,6 +99,22 @@ function handleError(f, args) {
 function getArrayU8FromWasm0(ptr, len) {
     return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
 }
+/**
+* @param {number} num_threads
+* @returns {Promise<any>}
+*/
+export function initThreadPool(num_threads) {
+    const ret = wasm.initThreadPool(num_threads);
+    return takeObject(ret);
+}
+
+/**
+* @param {number} receiver
+*/
+export function wbg_rayon_start_worker(receiver) {
+    wasm.wbg_rayon_start_worker(receiver);
+}
+
 /**
 */
 export class Emitter {
@@ -666,6 +711,48 @@ export class Vec2D {
         return Vec2D.__wrap(ret);
     }
 }
+/**
+*/
+export class wbg_rayon_PoolBuilder {
+
+    static __wrap(ptr) {
+        const obj = Object.create(wbg_rayon_PoolBuilder.prototype);
+        obj.ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wbg_rayon_poolbuilder_free(ptr);
+    }
+    /**
+    * @returns {number}
+    */
+    numThreads() {
+        const ret = wasm.wbg_rayon_poolbuilder_numThreads(this.ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @returns {number}
+    */
+    receiver() {
+        const ret = wasm.wbg_rayon_poolbuilder_receiver(this.ptr);
+        return ret;
+    }
+    /**
+    */
+    build() {
+        wasm.wbg_rayon_poolbuilder_build(this.ptr);
+    }
+}
 
 async function load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
@@ -701,7 +788,7 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbg_alert_f1acf6efdd080761 = function(arg0, arg1) {
+    imports.wbg.__wbg_alert_beb704c8b694d433 = function(arg0, arg1) {
         alert(getStringFromWasm0(arg0, arg1));
     };
     imports.wbg.__wbg_process_e56fd54cf6319b6c = function(arg0) {
@@ -808,8 +895,16 @@ function getImports() {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
+    imports.wbg.__wbindgen_module = function() {
+        const ret = init.__wbindgen_wasm_module;
+        return addHeapObject(ret);
+    };
     imports.wbg.__wbindgen_memory = function() {
         const ret = wasm.memory;
+        return addHeapObject(ret);
+    };
+    imports.wbg.__wbg_startWorkers_04f63eca19916b8f = function(arg0, arg1, arg2) {
+        const ret = startWorkers(takeObject(arg0), takeObject(arg1), wbg_rayon_PoolBuilder.__wrap(arg2));
         return addHeapObject(ret);
     };
 
@@ -823,6 +918,7 @@ function initMemory(imports, maybe_memory) {
 function finalizeInit(instance, module) {
     wasm = instance.exports;
     init.__wbindgen_wasm_module = module;
+    cachedUint32Memory0 = new Uint32Array();
     cachedUint8Memory0 = new Uint8Array();
 
     wasm.__wbindgen_start();

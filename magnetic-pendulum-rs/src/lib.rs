@@ -3,6 +3,11 @@ mod utils;
 use rand::prelude::*;
 use std::mem;
 use wasm_bindgen::prelude::*;
+
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
+
+#[cfg(feature = "parallel")]
 pub use wasm_bindgen_rayon::init_thread_pool;
 use std::collections::HashMap;
 
@@ -20,6 +25,14 @@ extern "C" {
 #[wasm_bindgen]
 pub fn greet() {
     alert("Hello, magnetic-pendulum!");
+}
+
+#[wasm_bindgen]
+pub fn sum_of_squares(numbers: &[i32]) -> i32 {
+  numbers
+  .par_iter()
+  .map(|x| x * x)
+  .sum()
 }
 
 const INIT_STEPS: u32 = 250;

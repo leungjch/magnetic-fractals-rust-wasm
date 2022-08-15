@@ -1,20 +1,34 @@
-
-// import * as wasm from "magnetic-pendulum-wasm"
-import init from  "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js"
-import * as wasm from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js"
+import * as Comlink from 'comlink'
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
+import * as wasm from "magnetic-pendulum-wasm";
+import  init from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js";
+
+// Start thread
+(async () => {
+  const thread = await Comlink.wrap(
+    new Worker(new URL('./wasm-worker.js', import.meta.url), { type: 'module' })
+  // @ts-ignore
+  ).thread;
+  console.log("Gotten")
+  
+
+  const numbers = Array.from({ length: 100 }, (_, i) => i + 1);
+  console.log("Array")
+  const sum = await thread.sum_of_squares(new Int32Array(numbers));
+  console.log("Sum is ", sum)
+  let mydiv = document.getElementById('mydiv');
+  // @ts-ignore
+  mydiv.textContent = `Sum of squares: ${sum}`;
+})();
+
 
 let memory: WebAssembly.Memory;
-async function run() {
-  const output = await init();
-  memory = output.memory;
-}
+const output = await init();
+memory = output.memory;
 
-await run();
-// greet()
 
 import { GUI } from "dat.gui"
-let FRACTAL_SIZE = 256;
+let FRACTAL_SIZE = 512;
 let SCALE = 16;
 const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE

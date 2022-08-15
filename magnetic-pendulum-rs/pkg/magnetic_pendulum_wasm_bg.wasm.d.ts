@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export function greet(): void;
+export function sum_of_squares(a: number, b: number): number;
 export function __wbg_vec2d_free(a: number): void;
 export function __wbg_get_vec2d_x(a: number): number;
 export function __wbg_set_vec2d_x(a: number, b: number): void;
@@ -64,7 +65,14 @@ export function fractalgenerator_generate(a: number, b: number, c: number, d: nu
 export function fractalgenerator_get_pointer(a: number): number;
 export function fractalgenerator_get_length(a: number): number;
 export function fractalgenerator_get_first_element(a: number): number;
+export function __wbg_wbg_rayon_poolbuilder_free(a: number): void;
+export function wbg_rayon_poolbuilder_numThreads(a: number): number;
+export function wbg_rayon_poolbuilder_receiver(a: number): number;
+export function wbg_rayon_poolbuilder_build(a: number): void;
+export function initThreadPool(a: number): number;
+export function wbg_rayon_start_worker(a: number): void;
 export const memory: WebAssembly.Memory;
+export function __wbindgen_malloc(a: number): number;
 export function __wbindgen_exn_store(a: number): void;
 export function __wbindgen_thread_destroy(): void;
 export function __wbindgen_start(): void;

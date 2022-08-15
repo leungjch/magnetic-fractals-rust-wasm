@@ -14,12 +14,14 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        background-color: white;
       }
     </style>
   </head>
   <body>
+    <div id="mydiv"></div>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
     <canvas id="magnetic-pendulum-canvas"></canvas>
-    <script src="/bundle.js"></script>
+    <script type ="module" src="bundle.js"></script>
   </body>
 </html>
