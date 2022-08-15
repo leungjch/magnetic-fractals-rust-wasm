@@ -7,7 +7,6 @@ import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 let memory: WebAssembly.Memory;
 async function run() {
   const output = await init();
-  wasm.greet();
   memory = output.memory;
 }
 
@@ -15,10 +14,11 @@ await run();
 // greet()
 
 import { GUI } from "dat.gui"
-let FRACTAL_SIZE = 512;
+let FRACTAL_SIZE = 256;
+let SCALE = 16;
 const universe = new wasm.Universe(64, 64, 500);
-const width = universe.width() * 20
-const height = universe.height() * 20
+const width = universe.width() * SCALE
+const height = universe.height() * SCALE 
 const fractal_generator = new wasm.FractalGenerator(FRACTAL_SIZE, FRACTAL_SIZE);
 let fractal_background: ImageData = new ImageData(width, height);
 var state = {
@@ -159,7 +159,7 @@ function draw(universe: wasm.Universe, t: number) {
     ctx.beginPath();
     ctx.strokeStyle = "rgba(1, 1, 1, 1)";
     ctx.fillStyle = magnet.color.to_string();
-    ctx.arc(canvas_x, canvas_y, magnet.radius * 20, 0, Math.PI * 2)
+    ctx.arc(canvas_x, canvas_y, magnet.radius * SCALE, 0, Math.PI * 2)
     ctx.fill();
     ctx.stroke();
   }
@@ -168,11 +168,12 @@ function draw(universe: wasm.Universe, t: number) {
   for (let i = 0; i < pendulums_n; i++) {
     const pendulum: Pendulum = getPendulum(dv_pendulums, pendulum_sizeof * i);
     const [canvas_x, canvas_y] = universe_to_canvas_coords(pendulum.pos.x, pendulum.pos.y);
+    ctx.strokeStyle = "rgba(0, 0, 0, 1)";
     ctx.beginPath();
     ctx.fillStyle = "black";
     ctx.arc(canvas_x, canvas_y, 5, 0, Math.PI * 2)
     ctx.fill();
-
+    ctx.stroke();
     // Show tension
     if (state.show_tension) {
       ctx.beginPath();
@@ -198,7 +199,6 @@ function draw(universe: wasm.Universe, t: number) {
 function update_fractal_background() {
 
   ctx.clearRect(0, 0, width, height); // clear canvas
-
   // Render the fractal as a background
   const img_ptr = fractal_generator.get_pointer()
   const rgb_sizeof = wasm.Rgb.size_of()
@@ -208,11 +208,11 @@ function update_fractal_background() {
   let fractal_width = fractal_generator.get_width();
   let fractal_height = fractal_generator.get_height();
   let pixel_width = width / fractal_width;
+  ctx.strokeStyle = "rgba(1, 1, 1, 0)";
   for (let i = 0; i < fractal_height; i++) {
     for (let j = 0; j < fractal_width; j++) {
       let rgb = getRgb(dv_img, rgb_sizeof * (i * fractal_width + j));
       ctx.fillStyle = rgb.to_string();
-      ctx.strokeStyle = "rgba(1, 1, 1, 0)";
       ctx.fillRect(j * pixel_width, i * pixel_width, pixel_width, pixel_width)
 
     }
