@@ -1,5 +1,5 @@
 [package]
-name = "magnetic-pendulum-rs"
+name = "magnetic-pendulum-wasm"
 version = "0.1.0"
 authors = ["leungjch <justin.leung.ch@gmail.com>"]
 edition = "2018"

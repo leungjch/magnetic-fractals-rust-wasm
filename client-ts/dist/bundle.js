@@ -252,7 +252,7 @@ eval("var logLevel = \"info\";\n\nfunction dummy() {}\n\nfunction shouldLog(leve
   \**************************/
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
 
-eval("\n// // A dependency graph that contains any wasm must all be imported\n// // asynchronously. This `bootstrap.js` file does the single async import, so\n// // that no one else needs to worry about it again.\nPromise.all(/*! import() */[__webpack_require__.e(\"vendors-node_modules_dat_gui_build_dat_gui_module_js\"), __webpack_require__.e(\"src_index_ts\")]).then(__webpack_require__.bind(__webpack_require__, /*! ./index.ts */ \"./src/index.ts\"))\n  .catch(e => console.error(\"Error importing `index.ts`:\", e));\n\n\n// import * as wasm from \"magnetic-pendulum-wasm\"\n// import { memory } from \"magnetic-pendulum-wasm/magnetic_pendulum_bg.wasm\";\n\n// wasm.greet();\n// const universe = wasm.Universe.new(512,512,100);\n// const width = universe.width()\n// const height = universe.height()\n// const canvas = document.getElementById('magnetic-pendulum-canvas')\n// canvas.width = width;\n// canvas.height = height;\n\n// const ctx = canvas.getContext('2d');\n// ctx.fillStyle=\"#000000\"\n// // requestAnimationFrame(renderLoop)\n\n\n\n//# sourceURL=webpack://client-ts/./src/bootstrap.js?");
+eval("\n// // A dependency graph that contains any wasm must all be imported\n// // asynchronously. This `bootstrap.js` file does the single async import, so\n// // that no one else needs to worry about it again.\nPromise.all(/*! import() */[__webpack_require__.e(\"vendors-node_modules_dat_gui_build_dat_gui_module_js-node_modules_magnetic-pendulum-wasm_magn-cde222\"), __webpack_require__.e(\"src_index_ts\")]).then(__webpack_require__.bind(__webpack_require__, /*! ./index.ts */ \"./src/index.ts\"))\n  .catch(e => console.error(\"Error importing `index.ts`:\", e));\n\n\n//# sourceURL=webpack://client-ts/./src/bootstrap.js?");
 
 /***/ })
 
@@ -435,7 +435,7 @@ eval("\n// // A dependency graph that contains any wasm must all be imported\n//
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("6890ad173b1a267f7784")
+/******/ 		__webpack_require__.h = () => ("18d9925f44fd3bba2204")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
@@ -524,21 +524,6 @@ eval("\n// // A dependency graph that contains any wasm must all be imported\n//
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/wasm loading */
-/******/ 	(() => {
-/******/ 		__webpack_require__.v = (exports, wasmModuleId, wasmModuleHash, importsObj) => {
-/******/ 			var req = fetch(__webpack_require__.p + "" + wasmModuleHash + ".module.wasm");
-/******/ 			if (typeof WebAssembly.instantiateStreaming === 'function') {
-/******/ 				return WebAssembly.instantiateStreaming(req, importsObj)
-/******/ 					.then((res) => (Object.assign(exports, res.instance.exports)));
-/******/ 			}
-/******/ 			return req
-/******/ 				.then((x) => (x.arrayBuffer()))
-/******/ 				.then((bytes) => (WebAssembly.instantiate(bytes, importsObj)))
-/******/ 				.then((res) => (Object.assign(exports, res.instance.exports)));
 /******/ 		};
 /******/ 	})();
 /******/ 	
@@ -958,7 +943,7 @@ eval("\n// // A dependency graph that contains any wasm must all be imported\n//
 /******/ 	
 /******/ 	/* webpack/runtime/jsonp chunk loading */
 /******/ 	(() => {
-/******/ 		// no baseURI
+/******/ 		__webpack_require__.b = document.baseURI || self.location.href;
 /******/ 		
 /******/ 		// object to store loaded and loading chunks
 /******/ 		// undefined = chunk not loaded, null = chunk preloaded/prefetched

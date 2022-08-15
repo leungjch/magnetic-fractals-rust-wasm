@@ -3,6 +3,7 @@ mod utils;
 use rand::prelude::*;
 use std::mem;
 use wasm_bindgen::prelude::*;
+pub use wasm_bindgen_rayon::init_thread_pool;
 use std::collections::HashMap;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global

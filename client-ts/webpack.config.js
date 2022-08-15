@@ -13,7 +13,11 @@ module.exports = {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/,
-      }
+      },
+      {
+          test: /\.wasm$/,
+          type: "asset/inline",
+      },
     ],
   },
   mode: "development",
@@ -25,6 +29,9 @@ module.exports = {
   )],
   experiments: {
     asyncWebAssembly: true,
+    syncWebAssembly: true,
+    topLevelAwait: true
+
   },
   devServer: {
       historyApiFallback: {

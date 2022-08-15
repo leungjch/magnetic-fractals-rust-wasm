@@ -1,7 +1,19 @@
 
-import * as wasm from "magnetic-pendulum-rs"
-import { memory } from "magnetic-pendulum-rs/magnetic_pendulum_rs_bg.wasm";
+// import * as wasm from "magnetic-pendulum-wasm"
+import init from  "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js"
+import * as wasm from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js"
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
+
+let memory: WebAssembly.Memory;
+async function run() {
+  const output = await init();
+  wasm.greet();
+  memory = output.memory;
+}
+
+await run();
+// greet()
+
 import { GUI } from "dat.gui"
 let FRACTAL_SIZE = 512;
 const universe = new wasm.Universe(64, 64, 500);
@@ -274,7 +286,7 @@ function getRgb(dv: DataView, ptr: number) {
   return new Rgb(color_r, color_g, color_b);
 }
 
-// Render the fractal for the first time
-generate_fractal_button.generate_fractal();
-// Run the render loop
-requestAnimationFrame(renderLoop);
+  // Render the fractal for the first time
+  // generate_fractal_button.generate_fractal();
+  // Run the render loop
+  requestAnimationFrame(renderLoop);
