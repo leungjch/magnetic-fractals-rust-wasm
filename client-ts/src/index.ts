@@ -134,12 +134,7 @@ function draw(universe: wasm.Universe, t: number) {
   ctx.clearRect(0, 0, width, height); // clear canvas
 
 
-  // Get pendulums info from wasm memory
-  const pendulums_ptr = universe.pendulums()
-  const pendulum_sizeof = wasm.Pendulum.size_of()
-  const pendulums_n = universe.pendulums_len();
-  let dv_pendulums = new DataView(memory.buffer, pendulums_ptr, pendulums_n * pendulum_sizeof);
-
+  // Show the fractal background
   if (state.show_fractal) {
     ctx.putImageData(fractal_background, 0, 0);
   }
@@ -164,11 +159,17 @@ function draw(universe: wasm.Universe, t: number) {
     ctx.stroke();
   }
 
+  // Get pendulums info from wasm memory
+  const pendulums_ptr = universe.pendulums()
+  const pendulum_sizeof = wasm.Pendulum.size_of()
+  const pendulums_n = universe.pendulums_len();
+  let dv_pendulums = new DataView(memory.buffer, pendulums_ptr, pendulums_n * pendulum_sizeof);
+
   // Render pendulums from wasm memory
   for (let i = 0; i < pendulums_n; i++) {
     const pendulum: Pendulum = getPendulum(dv_pendulums, pendulum_sizeof * i);
     const [canvas_x, canvas_y] = universe_to_canvas_coords(pendulum.pos.x, pendulum.pos.y);
-    ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+    ctx.strokeStyle = "#FFFFFF";
     ctx.beginPath();
     ctx.fillStyle = "black";
     ctx.arc(canvas_x, canvas_y, 5, 0, Math.PI * 2)
