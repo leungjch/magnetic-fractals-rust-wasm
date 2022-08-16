@@ -36,8 +36,8 @@ pub fn sum_of_squares(numbers: &[i32]) -> i32 {
     numbers.par_iter().map(|x| x * x).sum()
 }
 
-const INIT_STEPS: u32 = 250;
-const INIT_DELTA: f64 = 0.0001;
+const INIT_STEPS: u32 = 100;
+const INIT_DELTA: f64 = 0.001;
 
 #[wasm_bindgen]
 #[repr(C)]
@@ -201,26 +201,26 @@ impl Universe {
     pub fn new(width: u32, height: u32, max_iters: u32) -> Universe {
         // create some magnets
         let magnets = vec![
-            Magnet::new(
-                Vec2D::new(width as f64 / 3.0, height as f64 / 2.0),
-                100.0,
-                2.0,
-            ),
-            Magnet::new(
-                Vec2D::new(width as f64 / 3.0 * 2.0, height as f64 / 2.0),
-                100.0,
-                2.0,
-            ),
-            Magnet::new(
-                Vec2D::new(width as f64 / 2.0, height as f64 / 3.0),
-                100.0,
-                2.0,
-            ),
-            Magnet::new(
-                Vec2D::new(width as f64 / 2.0, (height as f64) / 3.0 * 2.0),
-                100.0,
-                2.0,
-            ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 3.0, height as f64 / 2.0),
+            //     100.0,
+            //     2.0,
+            // ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 3.0 * 2.0, height as f64 / 2.0),
+            //     100.0,
+            //     2.0,
+            // ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 2.0, height as f64 / 3.0),
+            //     100.0,
+            //     2.0,
+            // ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 2.0, (height as f64) / 3.0 * 2.0),
+            //     100.0,
+            //     2.0,
+            // ),
         ];
         let pendulums = vec![];
 
@@ -683,18 +683,23 @@ impl FractalGenerator {
 
         console::log_2(&"Rowdata is".into(), &"hi".into());
 
-        iters_colors.iter().for_each(|(iters, color)| {
-            if max_iters_map.contains_key(color) {
-                let old_val = *(max_iters_map.get(color).unwrap());
-                max_iters_map.insert(*color, u32::max(*iters, old_val));
-            } else {
-                max_iters_map.insert(*color, *iters);
-            }
-        });
+        // iters_colors.par_iter_mut().for_each(|(iters, color)| {
+        //     if max_iters_map.contains_key(color) {
+        //         let old_val = *(max_iters_map.get(color).unwrap());
+        //         max_iters_map.insert(*color, u32::max(*iters, old_val));
+        //     } else {
+        //         max_iters_map.insert(*color, *iters);
+        //     }
+        // });
+
+        let max_iters : u32 = iters_colors.par_iter()
+        .cloned()
+        .reduce_with(|a,b| (u32::max(a.0, b.0), a.1))
+        .unwrap().0;
 
         console::log_1(&"hello running iter_all".into());
         iters_colors.into_par_iter().flat_map(move |(iters, color)| {
-            let max_iters = *(max_iters_map.get(&color).unwrap());
+            // let max_iters = *(max_iters_map.get(&color).unwrap());
             // let max_iters = 10;
             vec![
                 (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
@@ -730,7 +735,6 @@ impl FractalGenerator {
             image_width as u32,
             image_height as u32,
         );
-        assert!(universe.magnets.len() > 0);
         // Create a pendulum
         let mut p = Pendulum::new(pendulum_pos, k, friction, mass);
         // Loop until max iters

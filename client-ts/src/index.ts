@@ -26,7 +26,6 @@ const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE
 const height = universe.height() * SCALE
 const num = 9;
-const fractal_generator = new wasm.FractalGenerator(FRACTAL_SIZE, FRACTAL_SIZE);
 let fractal_background: ImageData = new ImageData(FRACTAL_SIZE, FRACTAL_SIZE);
 
 const canvas = <HTMLCanvasElement>document.getElementById('magnetic-pendulum-canvas')
@@ -42,7 +41,7 @@ var state = {
   tension: 0.8,
   friction: 1.0,
   mass: 1.0,
-  show_velocity: false,
+  show_velocity: true,
   show_tension: false,
   steps: 50,
   magnet_strength: 50,

@@ -25,7 +25,7 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \******************************************************************/
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-eval("module.exports = __webpack_require__.p + \"e23afff1f93eef0b0489.wasm\";\n\n//# sourceURL=webpack://client-ts/../magnetic-pendulum-rs/pkg/magnetic_pendulum_wasm_bg.wasm?");
+eval("module.exports = __webpack_require__.p + \"9f455df00084dc2141a4.wasm\";\n\n//# sourceURL=webpack://client-ts/../magnetic-pendulum-rs/pkg/magnetic_pendulum_wasm_bg.wasm?");
 
 /***/ })
 
