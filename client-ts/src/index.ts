@@ -25,12 +25,40 @@ let SCALE = 16;
 const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE
 const height = universe.height() * SCALE
+// Set default magnet
+
+
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 3.0, height as f64 / 2.0),
+            //     100.0,
+            //     2.0,
+            // ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 3.0 * 2.0, height as f64 / 2.0),
+            //     100.0,
+            //     2.0,
+            // ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 2.0, height as f64 / 3.0),
+            //     100.0,
+            //     2.0,
+            // ),
+            // Magnet::new(
+            //     Vec2D::new(width as f64 / 2.0, (height as f64) / 3.0 * 2.0),
+            //     100.0,
+            //     2.0,
+            // ),
+universe.create_magnet(universe.width() / 3, universe.height()/2, 100, 2)
+universe.create_magnet(universe.width() / 3*2, universe.height()/2, 100, 2)
+
+universe.create_magnet(universe.width() / 2, universe.height()/3*2, 100, 2)
 const num = 9;
 let fractal_background: ImageData = new ImageData(FRACTAL_SIZE, FRACTAL_SIZE);
 
 const canvas = <HTMLCanvasElement>document.getElementById('magnetic-pendulum-canvas')
 canvas.width = width;
 canvas.height = height;
+canvas.style.outline="solid"
 
 const ctx = canvas.getContext('2d');
 ctx.fillStyle = "black";
@@ -359,6 +387,6 @@ function getRgb(dv: DataView, ptr: number) {
 }
 
 // Render the fractal for the first time
-// generate_fractal_button.generate_fractal();
+generate_fractal_button.gen_fractal();
 // Run the render loop
 requestAnimationFrame(renderLoop);

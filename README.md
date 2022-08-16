@@ -8,3 +8,5 @@
 <img src="screenshots/image2.jpg" alt="drawing" width="33%"/>
 <img src="screenshots/image3.jpg" alt="drawing" width="33%"/>
 </p>
+
+## How it works
