@@ -1,7 +1,7 @@
 import * as Comlink from 'comlink'
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import * as wasm from "magnetic-pendulum-wasm";
-import  init, {initThreadPool} from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js";
+import init, { initThreadPool } from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js";
 
 const output = await init();
 const memory = output.memory
@@ -12,7 +12,7 @@ let handlers = await Comlink.wrap(
   new Worker(new URL('./wasm-worker.js', import.meta.url), {
     type: 'module'
   })
-// @ts-ignore
+  // @ts-ignore
 ).handlers;
 console.log("handlers is", handlers['multiThread'])
 
@@ -24,7 +24,7 @@ let FRACTAL_SIZE = 256;
 let SCALE = 16;
 const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE
-const height = universe.height() * SCALE 
+const height = universe.height() * SCALE
 const num = 9;
 const fractal_generator = new wasm.FractalGenerator(FRACTAL_SIZE, FRACTAL_SIZE);
 let fractal_background: ImageData = new ImageData(FRACTAL_SIZE, FRACTAL_SIZE);
@@ -49,6 +49,7 @@ var state = {
   magnet_radius: 2,
   emitter_interval: 50,
   show_fractal: true,
+  show_magnets: true,
 };
 
 var reset_button = {
@@ -62,7 +63,7 @@ var reset_button = {
   }
 };
 
-async function resizeImageData (imageData: ImageData, width: number, height: number) {
+async function resizeImageData(imageData: ImageData, width: number, height: number) {
   const resizeWidth = width
   const resizeHeight = height
   const ibm = await window.createImageBitmap(imageData, 0, 0, imageData.width, imageData.height)
@@ -86,41 +87,39 @@ var generate_fractal_button = {
     const magnets_n = universe.magnets_len();
     let dv_magnets = new DataView(memory.buffer, magnets_ptr, magnets_n * magnet_sizeof);
 
-    // Render magnets from wasm memory
     const magnets = [];
     for (let i = 0; i < magnets_n; i++) {
-      const magnet =  getMagnet(dv_magnets, i * magnet_sizeof)
+      const magnet = getMagnet(dv_magnets, i * magnet_sizeof)
       console.log(magnet)
       magnets.push(magnet);
     }
 
-    let {raw_image_data, time } = await handler({
-              image_width: FRACTAL_SIZE,
-              image_height: FRACTAL_SIZE,
-              universe: universe,
-              k: state.tension,
-              friction: state.friction,
-              mass: state.mass,
-              magnets: magnets
-            });
-    console.log("hel")
+    // Call the multithreaded fractal generator
+    let { raw_image_data, time } = await handler({
+      image_width: FRACTAL_SIZE,
+      image_height: FRACTAL_SIZE,
+      universe: universe,
+      k: state.tension,
+      friction: state.friction,
+      mass: state.mass,
+      magnets: magnets
+    });
 
+    let pixel_width = width / FRACTAL_SIZE;
+    ctx.strokeStyle = "rgba(1, 1, 1, 0)";
+    let data = raw_image_data;
+    for (var i = 0; i < data.length; i += 4) {
 
-   let pixel_width = width / FRACTAL_SIZE;
-   ctx.strokeStyle = "rgba(1, 1, 1, 0)";
-   let data = raw_image_data;
-   for (var i = 0; i < data.length; i+=4) {
-
-    let rgb = new Rgb(data[i], data[i+1], data[i+2]) // ignore alpha
-    ctx.fillStyle = rgb.to_string();
-    console.log()
-    let x = (i/4)%FRACTAL_SIZE*pixel_width;
-    let y = (i/4)/FRACTAL_SIZE*pixel_width;
-    console.log(x,y)
-    ctx.fillRect(x,y,pixel_width,pixel_width)
-   }
-   // save the background so that we do not have to redraw/read from wasm memory each frame
-   fractal_background = ctx.getImageData(0, 0, width, height);
+      let rgb = new Rgb(data[i], data[i + 1], data[i + 2]) // ignore alpha
+      ctx.fillStyle = rgb.to_string();
+      console.log()
+      let x = (i / 4) % FRACTAL_SIZE * pixel_width;
+      let y = (i / 4) / FRACTAL_SIZE * pixel_width;
+      console.log(x, y)
+      ctx.fillRect(x, y, pixel_width, pixel_width)
+    }
+    // save the background so that we do not have to redraw/read from wasm memory each frame
+    fractal_background = ctx.getImageData(0, 0, width, height);
 
     // const fractal_background_small = new ImageData(raw_image_data, FRACTAL_SIZE, FRACTAL_SIZE);
     // fractal_background = await resizeImageData(fractal_background_small, width, height)
@@ -144,6 +143,7 @@ gui.add(state, 'steps', 0, 200).name("Render speed").onChange((new_steps: number
 gui.add(state, "show_velocity").name("Show velocity")
 gui.add(state, "show_tension").name("Show tension")
 gui.add(state, "show_fractal").name("Show fractal")
+gui.add(state, "show_magnets").name("Show magnets")
 gui.add(reset_button, 'clear').name("Clear all");
 gui.add(generate_fractal_button, "gen_fractal").name("Generate fractal");
 
@@ -208,24 +208,27 @@ function draw(universe: wasm.Universe, t: number) {
     ctx.putImageData(fractal_background, 0, 0);
   }
 
-  // Read magnets from wasm memory
-  const magnets_ptr = universe.magnets()
-  const magnet_sizeof = wasm.Magnet.size_of()
-  const magnets_n = universe.magnets_len();
-  // console.log("magnets_n", magnets_n, memory, magnets_ptr)
-  let dv_magnets = new DataView(memory.buffer, magnets_ptr, magnets_n * magnet_sizeof);
+  if (state.show_magnets) {
+    // Render magnets from wasm memory
+    // Read magnets from wasm memory
+    const magnets_ptr = universe.magnets()
+    const magnet_sizeof = wasm.Magnet.size_of()
+    const magnets_n = universe.magnets_len();
+    for (let i = 0; i < magnets_n; i++) {
+      // console.log("magnets_n", magnets_n, memory, magnets_ptr)
+      let dv_magnets = new DataView(memory.buffer, magnets_ptr, magnets_n * magnet_sizeof);
 
-  // Render magnets from wasm memory
-  for (let i = 0; i < magnets_n; i++) {
-    let magnet: Magnet = getMagnet(dv_magnets, i * magnet_sizeof);
-    const [canvas_x, canvas_y] = universe_to_canvas_coords(magnet.pos.x, magnet.pos.y);
+      let magnet: Magnet = getMagnet(dv_magnets, i * magnet_sizeof);
+      const [canvas_x, canvas_y] = universe_to_canvas_coords(magnet.pos.x, magnet.pos.y);
 
-    ctx.beginPath();
-    ctx.strokeStyle = "rgba(1, 1, 1, 1)";
-    ctx.fillStyle = magnet.color.to_string();
-    ctx.arc(canvas_x, canvas_y, magnet.radius * SCALE, 0, Math.PI * 2)
-    ctx.fill();
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(1, 1, 1, 1)";
+      ctx.fillStyle = magnet.color.to_string();
+      ctx.arc(canvas_x, canvas_y, magnet.radius * SCALE, 0, Math.PI * 2)
+      ctx.fill();
+      ctx.stroke();
+    }
+
   }
 
   // Get pendulums info from wasm memory
@@ -356,7 +359,7 @@ function getRgb(dv: DataView, ptr: number) {
   return new Rgb(color_r, color_g, color_b);
 }
 
-  // Render the fractal for the first time
-  // generate_fractal_button.generate_fractal();
-  // Run the render loop
-  requestAnimationFrame(renderLoop);
+// Render the fractal for the first time
+// generate_fractal_button.generate_fractal();
+// Run the render loop
+requestAnimationFrame(renderLoop);
