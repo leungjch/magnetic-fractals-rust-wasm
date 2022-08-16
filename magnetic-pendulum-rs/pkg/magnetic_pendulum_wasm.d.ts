@@ -19,6 +19,10 @@ export function sum_of_squares(numbers: Int32Array): number;
 */
 export function generate_fractal(image_width: number, image_height: number, universe: Universe, k: number, friction: number, mass: number): Uint8ClampedArray;
 /**
+* @returns {Uint8ClampedArray}
+*/
+export function generate_rand(): Uint8ClampedArray;
+/**
 * @param {number} num_threads
 * @returns {Promise<any>}
 */
@@ -361,6 +365,7 @@ export interface InitOutput {
   readonly emitter_tick: (a: number) => void;
   readonly __wbg_fractalgenerator_free: (a: number) => void;
   readonly generate_fractal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+  readonly generate_rand: (a: number) => void;
   readonly fractalgenerator_new: (a: number, b: number) => number;
   readonly fractalgenerator_get_width: (a: number) => number;
   readonly fractalgenerator_get_height: (a: number) => number;
@@ -376,6 +381,7 @@ export interface InitOutput {
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
   readonly __wbindgen_free: (a: number, b: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_thread_destroy: () => void;
   readonly __wbindgen_start: () => void;
 }

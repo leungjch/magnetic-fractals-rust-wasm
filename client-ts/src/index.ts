@@ -1,20 +1,23 @@
 import * as Comlink from 'comlink'
 import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import * as wasm from "magnetic-pendulum-wasm";
-import  init from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js";
+import  init, {initThreadPool} from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js";
 
-let memory: WebAssembly.Memory;
 const output = await init();
-memory = output.memory;
+const memory = output.memory
+
 
 // // Get 
-// let handlers = await Comlink.wrap(
-//   new Worker(new URL('./wasm-worker.js', import.meta.url), {
-//     type: 'module'
-//   })
-// // @ts-ignore
-// ).handlers;
-// console.log("handlers is", handlers)
+let handlers = await Comlink.wrap(
+  new Worker(new URL('./wasm-worker.js', import.meta.url), {
+    type: 'module'
+  })
+// @ts-ignore
+).handlers;
+console.log("handlers is", handlers['multiThread'])
+
+
+
 
 import { GUI } from "dat.gui"
 let FRACTAL_SIZE = 256;
@@ -22,8 +25,9 @@ let SCALE = 16;
 const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE
 const height = universe.height() * SCALE 
+const num = 9;
 const fractal_generator = new wasm.FractalGenerator(FRACTAL_SIZE, FRACTAL_SIZE);
-let fractal_background: ImageData = new ImageData(width, height);
+let fractal_background: ImageData = new ImageData(FRACTAL_SIZE, FRACTAL_SIZE);
 
 const canvas = <HTMLCanvasElement>document.getElementById('magnetic-pendulum-canvas')
 canvas.width = width;
@@ -59,20 +63,43 @@ var reset_button = {
 };
 
 var generate_fractal_button = {
-  generate_fractal: function () {
+  gen_fractal: async function () {
     // fractal_generator.generate(universe, state.tension, state.friction, state.mass)
     // update_fractal_background();
-    // let handler = handlers['multiThread']
-    // let {rawImageData, time } = handler({
-    //           width,
-    //           height,
-    //           universe
-    //         });
-    // const imgData = new ImageData(rawImageData,FRACTAL_SIZE, FRACTAL_SIZE);
-    // ctx.putImageData(imgData, 0,0)
-    const raw_image_data = wasm.generate_fractal(FRACTAL_SIZE, FRACTAL_SIZE, universe, state.tension, state.friction, state.mass)
-    fractal_background = new ImageData(raw_image_data, FRACTAL_SIZE, FRACTAL_SIZE);
+    let handler = handlers['multiThread']
+    // Read magnets from memory
+    const magnets_ptr = universe.magnets()
+    const magnet_sizeof = wasm.Magnet.size_of()
+    const magnets_n = universe.magnets_len();
+    // console.log("magnets_n", magnets_n, memory, magnets_ptr)
+    let dv_magnets = new DataView(memory.buffer, magnets_ptr, magnets_n * magnet_sizeof);
 
+    // Render magnets from wasm memory
+    const magnets = [];
+    for (let i = 0; i < magnets_n; i++) {
+      const magnet =  getMagnet(dv_magnets, i * magnet_sizeof)
+      console.log(magnet)
+      magnets.push(magnet);
+    }
+
+    console.log("uni is ", universe, num, height)
+    let {raw_image_data, time } = await handler({
+              image_width: FRACTAL_SIZE,
+              image_height: FRACTAL_SIZE,
+              universe: universe,
+              k: state.tension,
+              friction: state.friction,
+              mass: state.mass,
+              magnets: magnets
+            });
+    // ctx.putImageData(imgData, 0,0)
+    // const raw_image_data = wasm.generate_fractal(FRACTAL_SIZE, FRACTAL_SIZE, universe, state.tension, state.friction, state.mass)
+    // console.log("data len is", raw_image_data.length, fractal_background.data)
+    console.log("called fractal", time)
+    console.log(raw_image_data.length, fractal_background.data.length)
+    fractal_background = new ImageData(raw_image_data, FRACTAL_SIZE, FRACTAL_SIZE);
+    console.log(fractal_background)
+    ctx.putImageData(fractal_background,0,0)
   }
 }
 
@@ -93,7 +120,7 @@ gui.add(state, "show_velocity").name("Show velocity")
 gui.add(state, "show_tension").name("Show tension")
 gui.add(state, "show_fractal").name("Show fractal")
 gui.add(reset_button, 'clear').name("Clear all");
-gui.add(generate_fractal_button, "generate_fractal").name("Generate fractal");
+gui.add(generate_fractal_button, "gen_fractal").name("Generate fractal");
 
 function canvas_to_universe_coords(canvas_x: number, canvas_y: number): [number, number] {
   const x = canvas_x / width * universe.width()

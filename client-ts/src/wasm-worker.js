@@ -37,17 +37,25 @@ Comlink.expose({
 });
 
 // Wrap wasm-bindgen exports (the `generate` function) to add time measurement.
-function wrapExports(wasm) {
-  return ({ width, height, universe_ptr }) => {
+function wrapExports({generate_rand, generate_fractal, Universe}) {
+  return ({ image_width, image_height, universe, k, friction ,mass, magnets  }) => {
     const start = performance.now();
-    console.log("Hi", universe, width, height)
-    let universe = wasm.Universe.wrap(universe_ptr)
-    const rawImageData = wasm.generate_fractal(width, height, universe);
+    console.log("hey", Universe)
+    let uni = new Universe(64,64,500);
+    for (let magnet of magnets) {
+      uni.create_magnet(magnet.pos.x, magnet.pos.y, magnet.strength, magnet.radius)
+    }
+    let universe_obj = Universe.__wrap(universe)
+    console.log("Hi", universe, image_width, image_height)
+    console.log(universe_obj)
+    console.log("geenrating fractal...",universe.ptr)
+    const rawImageData = generate_fractal(image_width, image_height, uni, k, friction, mass);
+    // const rawImageData = generate_rand();
     const time = performance.now() - start;
-    console.log("time taken is", time)
+    console.log("time taken is", time, rawImageData)
     return {
       // Little perf boost to transfer data to the main thread w/o copying.
-      rawImageData: Comlink.transfer(rawImageData, [rawImageData.buffer]),
+      raw_image_data: Comlink.transfer(rawImageData, [rawImageData.buffer]),
       time
     };
   };

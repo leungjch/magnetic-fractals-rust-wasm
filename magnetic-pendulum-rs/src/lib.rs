@@ -18,6 +18,9 @@ use web_sys::console;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+extern crate console_error_panic_hook;
+
+
 #[wasm_bindgen]
 extern "C" {
     fn alert(s: &str);
@@ -560,8 +563,18 @@ pub struct FractalGenerator {
 
 #[wasm_bindgen]
 pub fn generate_fractal(image_width: usize, image_height: usize, universe: &Universe, k: f64, friction: f64, mass: f64) -> Clamped<Vec<u8>>{
+        console_error_panic_hook::set_once();
     Clamped(FractalGenerator::new(image_width, image_height)
     .generate(universe, k, friction, mass))
+}
+
+#[wasm_bindgen]
+pub fn generate_rand() -> Clamped<Vec<u8>>{
+    Clamped(
+        (0..512*512).into_par_iter().map(|i: usize|{
+            // console::log_1(&"hello".into());
+            128
+        }).collect::<Vec<u8>>())
 }
 
 #[wasm_bindgen]
@@ -595,7 +608,7 @@ impl FractalGenerator {
         // Create an auxiliary vector that stores the number of iterations that was taken for each pendulum
         let mut pendulum_iters = vec![0; self.image_width * self.image_height];
 
-        // First pass: Loop through the canvas and run a pendulum, and store info
+        // // First pass: Loop through the canvas and run a pendulum, and store info
         FractalGenerator::iter_all(
             self.image_width as u32,
             self.image_height as u32,
@@ -605,6 +618,12 @@ impl FractalGenerator {
             mass,
         )
         .collect::<Vec<u8>>().clone()
+
+        // console_error_panic_hook::set_once();
+        // (0..self.image_width*self.image_height).into_par_iter().map(|i: usize|{
+        //     127
+        // }).collect::<Vec<u8>>()
+
     }
 
 }
@@ -647,10 +666,10 @@ impl FractalGenerator {
         k: f64,
         friction: f64,
         mass: f64,
-    ) -> impl Iterator<Item = u8> + '_ {
+    ) -> impl ParallelIterator<Item = u8> + '_ {
         let mut max_iters_map: HashMap<Rgb, u32> = HashMap::new();
 
-        let iters_colors: Vec<(u32, Rgb)> = (0..image_height).into_iter().flat_map(move |i| {
+        let iters_colors: Vec<(u32, Rgb)> = (0..image_height).into_par_iter().flat_map_iter(move |i| {
             FractalGenerator::iter_row(
                 image_width,
                 image_height,
@@ -662,6 +681,7 @@ impl FractalGenerator {
             )
         }).collect();
 
+        console::log_2(&"Rowdata is".into(), &"hi".into());
 
         iters_colors.iter().for_each(|(iters, color)| {
             if max_iters_map.contains_key(color) {
@@ -672,14 +692,24 @@ impl FractalGenerator {
             }
         });
 
-        iters_colors.into_iter().flat_map(move |(iters, color)| {
+        console::log_1(&"hello running iter_all".into());
+        iters_colors.into_par_iter().flat_map(move |(iters, color)| {
             let max_iters = *(max_iters_map.get(&color).unwrap());
+            // let max_iters = 10;
             vec![
                 (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
                 (color.g as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
                 (color.b as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
-            ]
+                255,
+                ]
         })
+
+        // (0..image_width*image_height).into_par_iter().flat_map_iter(|i|{
+        //     // console::log_1(&"hello".into());
+        //     vec![
+        //         0,0,0,255
+        //     ]
+        // })
         
     }
 
