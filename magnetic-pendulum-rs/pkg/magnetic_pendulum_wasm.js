@@ -6,18 +6,9 @@ const heap = new Array(32).fill(undefined);
 
 heap.push(undefined, null, true, false);
 
-let heap_next = heap.length;
-
-function addHeapObject(obj) {
-    if (heap_next === heap.length) heap.push(heap.length + 1);
-    const idx = heap_next;
-    heap_next = heap[idx];
-
-    heap[idx] = obj;
-    return idx;
-}
-
 function getObject(idx) { return heap[idx]; }
+
+let heap_next = heap.length;
 
 function dropObject(idx) {
     if (idx < 36) return;
@@ -29,6 +20,15 @@ function takeObject(idx) {
     const ret = getObject(idx);
     dropObject(idx);
     return ret;
+}
+
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
 }
 
 const cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
@@ -88,16 +88,25 @@ function _assertClass(instance, klass) {
     return instance.ptr;
 }
 
+let cachedInt32Memory0 = new Int32Array();
+
+function getInt32Memory0() {
+    if (cachedInt32Memory0.buffer !== wasm.memory.buffer) {
+        cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32Memory0;
+}
+
+function getArrayU8FromWasm0(ptr, len) {
+    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
 function handleError(f, args) {
     try {
         return f.apply(this, args);
     } catch (e) {
         wasm.__wbindgen_exn_store(addHeapObject(e));
     }
-}
-
-function getArrayU8FromWasm0(ptr, len) {
-    return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
 }
 /**
 * @param {number} num_threads
@@ -257,31 +266,21 @@ export class FractalGenerator {
     * @param {number} k
     * @param {number} friction
     * @param {number} mass
+    * @returns {Uint8Array}
     */
     generate(universe, k, friction, mass) {
-        _assertClass(universe, Universe);
-        wasm.fractalgenerator_generate(this.ptr, universe.ptr, k, friction, mass);
-    }
-    /**
-    * @returns {number}
-    */
-    get_pointer() {
-        const ret = wasm.fractalgenerator_get_pointer(this.ptr);
-        return ret;
-    }
-    /**
-    * @returns {number}
-    */
-    get_length() {
-        const ret = wasm.fractalgenerator_get_length(this.ptr);
-        return ret >>> 0;
-    }
-    /**
-    * @returns {Rgb}
-    */
-    get_first_element() {
-        const ret = wasm.fractalgenerator_get_first_element(this.ptr);
-        return Rgb.__wrap(ret);
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(universe, Universe);
+            wasm.fractalgenerator_generate(retptr, this.ptr, universe.ptr, k, friction, mass);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var v0 = getArrayU8FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_free(r0, r1 * 1);
+            return v0;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
 }
 /**
@@ -788,13 +787,6 @@ async function load(module, imports) {
 function getImports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbindgen_number_new = function(arg0) {
-        const ret = arg0;
-        return addHeapObject(ret);
-    };
-    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
-        takeObject(arg0);
-    };
     imports.wbg.__wbg_alert_beb704c8b694d433 = function(arg0, arg1) {
         alert(getStringFromWasm0(arg0, arg1));
     };
@@ -810,6 +802,9 @@ function getImports() {
     imports.wbg.__wbg_versions_77e21455908dad33 = function(arg0) {
         const ret = getObject(arg0).versions;
         return addHeapObject(ret);
+    };
+    imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
+        takeObject(arg0);
     };
     imports.wbg.__wbg_node_0dd25d832e4785d5 = function(arg0) {
         const ret = getObject(arg0).node;
@@ -922,6 +917,7 @@ function initMemory(imports, maybe_memory) {
 function finalizeInit(instance, module) {
     wasm = instance.exports;
     init.__wbindgen_wasm_module = module;
+    cachedInt32Memory0 = new Int32Array();
     cachedUint32Memory0 = new Uint32Array();
     cachedUint8Memory0 = new Uint8Array();
 

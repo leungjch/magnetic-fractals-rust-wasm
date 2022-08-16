@@ -69,20 +69,9 @@ export class FractalGenerator {
 * @param {number} k
 * @param {number} friction
 * @param {number} mass
+* @returns {Uint8Array}
 */
-  generate(universe: Universe, k: number, friction: number, mass: number): void;
-/**
-* @returns {number}
-*/
-  get_pointer(): number;
-/**
-* @returns {number}
-*/
-  get_length(): number;
-/**
-* @returns {Rgb}
-*/
-  get_first_element(): Rgb;
+  generate(universe: Universe, k: number, friction: number, mass: number): Uint8Array;
 }
 /**
 */
@@ -364,10 +353,7 @@ export interface InitOutput {
   readonly fractalgenerator_new: (a: number, b: number) => number;
   readonly fractalgenerator_get_width: (a: number) => number;
   readonly fractalgenerator_get_height: (a: number) => number;
-  readonly fractalgenerator_generate: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly fractalgenerator_get_pointer: (a: number) => number;
-  readonly fractalgenerator_get_length: (a: number) => number;
-  readonly fractalgenerator_get_first_element: (a: number) => number;
+  readonly fractalgenerator_generate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly __wbg_wbg_rayon_poolbuilder_free: (a: number) => void;
   readonly wbg_rayon_poolbuilder_numThreads: (a: number) => number;
   readonly wbg_rayon_poolbuilder_receiver: (a: number) => number;
@@ -376,6 +362,8 @@ export interface InitOutput {
   readonly wbg_rayon_start_worker: (a: number) => void;
   readonly memory: WebAssembly.Memory;
   readonly __wbindgen_malloc: (a: number) => number;
+  readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_free: (a: number, b: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __wbindgen_thread_destroy: () => void;
   readonly __wbindgen_start: () => void;

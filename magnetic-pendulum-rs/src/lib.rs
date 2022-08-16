@@ -556,7 +556,11 @@ impl Emitter {
 pub struct FractalGenerator {
     image_width: usize,
     image_height: usize,
-    image_data: Vec<Rgb>,
+}
+
+pub fn generate_fractal(image_width: usize, image_height: usize, universe: &Universe, k: f64, friction: f64, mass: f64) -> Vec<u8>{
+    FractalGenerator::new(image_width, image_height)
+    .generate(universe, k, friction, mass)
 }
 
 #[wasm_bindgen]
@@ -568,7 +572,6 @@ impl FractalGenerator {
         FractalGenerator {
             image_width,
             image_height,
-            image_data: vec![Rgb::white(); image_width * image_height],
         }
     }
 
@@ -582,7 +585,7 @@ impl FractalGenerator {
 
     // Generate a fractal image by placing a pendulum at each point of the canvas
     // And iterate the pendulum until it exceeds max_iters or reaches a magnet
-    pub fn generate(&mut self, universe: &Universe, k: f64, friction: f64, mass: f64) {
+    pub fn generate(&self, universe: &Universe, k: f64, friction: f64, mass: f64) -> Vec<u8> {
         // Create a hash map that stores the maximum number of iterations recorded for each magnet
         let mut max_iters_per_magnet = HashMap::<Rgb, u32>::new();
 
@@ -592,7 +595,7 @@ impl FractalGenerator {
         let mut pendulum_iters = vec![0; self.image_width * self.image_height];
 
         // First pass: Loop through the canvas and run a pendulum, and store info
-        self.image_data = FractalGenerator::iter_all(
+        FractalGenerator::iter_all(
             self.image_width as u32,
             self.image_height as u32,
             universe,
@@ -600,44 +603,9 @@ impl FractalGenerator {
             friction,
             mass,
         )
-        .collect::<Vec<Rgb>>().clone();
-        // let dat: JsValue = self.image_data.len().to_string().into();
-        // console::log_2(&"Final data is".into(), &dat);
-        
-
-        // // Second pass: Update the image_data array with shading based on the max time per magnet
-        // for i in 0..self.image_data.len() {
-        //     let magnet_color: Rgb = self.image_data[i];
-        //     let pendulum_iter: f64 = pendulum_iters[i] as f64;
-        //     let max_pendulum_iter: f64 =
-        //         (*(max_iters_per_magnet.get(&magnet_color).unwrap())) as f64;
-        //     self.image_data[i] = Rgb::new(
-        //         (magnet_color.r as f64 * (1.0 - pendulum_iter / max_pendulum_iter)) as u8,
-        //         (magnet_color.g as f64 * (1.0 - pendulum_iter / max_pendulum_iter)) as u8,
-        //         (magnet_color.b as f64 * (1.0 - pendulum_iter / max_pendulum_iter)) as u8,
-        //     );
-        // }
+        .collect::<Vec<u8>>().clone()
     }
 
-    // Multi-threaded implementation
-    // Rows iter_row in parallel
-    // #[cfg(feature = "rayon")]
-    // pub fn iter_all(&mut self) {}
-
-    pub fn get_pointer(&self) -> *const Rgb {
-        self.image_data.as_ptr()
-    }
-
-    pub fn get_length(&self) -> usize {
-        self.image_data.len()
-    }
-
-    pub fn get_first_element(&self) -> Rgb {
-        match self.image_data.get(0) {
-            Some(v) => *v,
-            None => Rgb::black(),
-        }
-    }
 }
 
 impl FractalGenerator {
@@ -670,7 +638,7 @@ impl FractalGenerator {
         res
     }
     // Single-threaded implementation
-    // #[cfg(feature = "rayon")]
+    #[cfg(feature = "rayon")]
     pub fn iter_all<'a>(
         image_width: u32,
         image_height: u32,
@@ -678,7 +646,7 @@ impl FractalGenerator {
         k: f64,
         friction: f64,
         mass: f64,
-    ) -> impl Iterator<Item = Rgb> + '_ {
+    ) -> impl Iterator<Item = u8> + '_ {
         let mut max_iters_map: HashMap<Rgb, u32> = HashMap::new();
 
         let iters_colors: Vec<(u32, Rgb)> = (0..image_height).into_iter().flat_map(move |i| {
@@ -694,12 +662,7 @@ impl FractalGenerator {
         }).collect();
 
 
-        // let dat: JsValue = iters_colors.by_ref().collect::<Vec<(u32,Rgb)>>().len().to_string().into();
-        // console::log_2(&"All data is".into(), &dat);
-
         iters_colors.iter().for_each(|(iters, color)| {
-            let dat4 : JsValue = max_iters_map.len().into();
-            // console::log_2(&"data555".into(), &dat4);
             if max_iters_map.contains_key(color) {
                 let old_val = *(max_iters_map.get(color).unwrap());
                 max_iters_map.insert(*color, u32::max(*iters, old_val));
@@ -708,22 +671,14 @@ impl FractalGenerator {
             }
         });
 
-        // let dat2: JsValue =  max_iters_map.len().into();
-        // console::log_2(&"All data2 is".into(), &dat2);
-
-
-        iters_colors.into_iter().map(move |(iters, color)| {
+        iters_colors.into_iter().flat_map(move |(iters, color)| {
             let max_iters = *(max_iters_map.get(&color).unwrap());
-            // console::log_1(&"helloooo".into());
-            Rgb::new(
+            vec![
                 (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
                 (color.g as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
                 (color.b as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
-            )
+            ]
         })
-
-
-
         
     }
 
