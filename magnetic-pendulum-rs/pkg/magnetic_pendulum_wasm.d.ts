@@ -9,6 +9,16 @@ export function greet(): void;
 */
 export function sum_of_squares(numbers: Int32Array): number;
 /**
+* @param {number} image_width
+* @param {number} image_height
+* @param {Universe} universe
+* @param {number} k
+* @param {number} friction
+* @param {number} mass
+* @returns {Uint8ClampedArray}
+*/
+export function generate_fractal(image_width: number, image_height: number, universe: Universe, k: number, friction: number, mass: number): Uint8ClampedArray;
+/**
 * @param {number} num_threads
 * @returns {Promise<any>}
 */
@@ -350,6 +360,7 @@ export interface InitOutput {
   readonly emitter_new: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
   readonly emitter_tick: (a: number) => void;
   readonly __wbg_fractalgenerator_free: (a: number) => void;
+  readonly generate_fractal: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly fractalgenerator_new: (a: number, b: number) => number;
   readonly fractalgenerator_get_width: (a: number) => number;
   readonly fractalgenerator_get_height: (a: number) => number;

@@ -3,29 +3,18 @@ import { Magnet, Vec2D, Rgb, Pendulum } from "./utils";
 import * as wasm from "magnetic-pendulum-wasm";
 import  init from "magnetic-pendulum-wasm/magnetic_pendulum_wasm.js";
 
-// Start thread
-(async () => {
-  const thread = await Comlink.wrap(
-    new Worker(new URL('./wasm-worker.js', import.meta.url), { type: 'module' })
-  // @ts-ignore
-  ).thread;
-  console.log("Gotten")
-  
-
-  const numbers = Array.from({ length: 100 }, (_, i) => i + 1);
-  console.log("Array")
-  const sum = await thread.sum_of_squares(new Int32Array(numbers));
-  console.log("Sum is ", sum)
-  let mydiv = document.getElementById('mydiv');
-  // @ts-ignore
-  mydiv.textContent = `Sum of squares: ${sum}`;
-})();
-
-
 let memory: WebAssembly.Memory;
 const output = await init();
 memory = output.memory;
 
+// // Get 
+// let handlers = await Comlink.wrap(
+//   new Worker(new URL('./wasm-worker.js', import.meta.url), {
+//     type: 'module'
+//   })
+// // @ts-ignore
+// ).handlers;
+// console.log("handlers is", handlers)
 
 import { GUI } from "dat.gui"
 let FRACTAL_SIZE = 256;
@@ -35,6 +24,15 @@ const width = universe.width() * SCALE
 const height = universe.height() * SCALE 
 const fractal_generator = new wasm.FractalGenerator(FRACTAL_SIZE, FRACTAL_SIZE);
 let fractal_background: ImageData = new ImageData(width, height);
+
+const canvas = <HTMLCanvasElement>document.getElementById('magnetic-pendulum-canvas')
+canvas.width = width;
+canvas.height = height;
+
+const ctx = canvas.getContext('2d');
+ctx.fillStyle = "black";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
 var state = {
   type: 'pendulum',
   tension: 0.8,
@@ -62,8 +60,19 @@ var reset_button = {
 
 var generate_fractal_button = {
   generate_fractal: function () {
-    fractal_generator.generate(universe, state.tension, state.friction, state.mass)
-    update_fractal_background();
+    // fractal_generator.generate(universe, state.tension, state.friction, state.mass)
+    // update_fractal_background();
+    // let handler = handlers['multiThread']
+    // let {rawImageData, time } = handler({
+    //           width,
+    //           height,
+    //           universe
+    //         });
+    // const imgData = new ImageData(rawImageData,FRACTAL_SIZE, FRACTAL_SIZE);
+    // ctx.putImageData(imgData, 0,0)
+    const raw_image_data = wasm.generate_fractal(FRACTAL_SIZE, FRACTAL_SIZE, universe, state.tension, state.friction, state.mass)
+    fractal_background = new ImageData(raw_image_data, FRACTAL_SIZE, FRACTAL_SIZE);
+
   }
 }
 
@@ -107,13 +116,6 @@ function getCursorPosition(canvas: HTMLCanvasElement, event: MouseEvent): [numbe
 }
 
 console.log(width, height)
-const canvas = <HTMLCanvasElement>document.getElementById('magnetic-pendulum-canvas')
-canvas.width = width;
-canvas.height = height;
-
-const ctx = canvas.getContext('2d');
-ctx.fillStyle = "black";
-ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 canvas.addEventListener('mousedown', function (e) {
   const [x, y]: [number, number] = getCursorPosition(canvas, e)
@@ -211,30 +213,30 @@ function draw(universe: wasm.Universe, t: number) {
 
 
 };
-function update_fractal_background() {
+// function update_fractal_background() {
 
-  ctx.clearRect(0, 0, width, height); // clear canvas
-  // Render the fractal as a background
-  const img_ptr = fractal_generator.get_pointer()
-  const rgb_sizeof = wasm.Rgb.size_of()
-  const img_len = fractal_generator.get_length();
-  let dv_img = new DataView(memory.buffer, img_ptr, img_len * rgb_sizeof);
-  // Get image data
-  let fractal_width = fractal_generator.get_width();
-  let fractal_height = fractal_generator.get_height();
-  let pixel_width = width / fractal_width;
-  ctx.strokeStyle = "rgba(1, 1, 1, 0)";
-  for (let i = 0; i < fractal_height; i++) {
-    for (let j = 0; j < fractal_width; j++) {
-      let rgb = getRgb(dv_img, rgb_sizeof * (i * fractal_width + j));
-      ctx.fillStyle = rgb.to_string();
-      ctx.fillRect(j * pixel_width, i * pixel_width, pixel_width, pixel_width)
+//   ctx.clearRect(0, 0, width, height); // clear canvas
+//   // Render the fractal as a background
+//   const img_ptr = fractal_generator.get_pointer()
+//   const rgb_sizeof = wasm.Rgb.size_of()
+//   const img_len = fractal_generator.get_length();
+//   let dv_img = new DataView(memory.buffer, img_ptr, img_len * rgb_sizeof);
+//   // Get image data
+//   let fractal_width = fractal_generator.get_width();
+//   let fractal_height = fractal_generator.get_height();
+//   let pixel_width = width / fractal_width;
+//   ctx.strokeStyle = "rgba(1, 1, 1, 0)";
+//   for (let i = 0; i < fractal_height; i++) {
+//     for (let j = 0; j < fractal_width; j++) {
+//       let rgb = getRgb(dv_img, rgb_sizeof * (i * fractal_width + j));
+//       ctx.fillStyle = rgb.to_string();
+//       ctx.fillRect(j * pixel_width, i * pixel_width, pixel_width, pixel_width)
 
-    }
-  }
-  // save the background so that we do not have to redraw/read from wasm memory each frame
-  fractal_background = ctx.getImageData(0, 0, width, height);
-}
+//     }
+//   }
+//   // save the background so that we do not have to redraw/read from wasm memory each frame
+//   fractal_background = ctx.getImageData(0, 0, width, height);
+// }
 
 
 function getMagnet(dv: DataView, ptr: number) {

@@ -58,6 +58,7 @@ export function __wbg_set_emitter_mass(a: number, b: number): void;
 export function emitter_new(a: number, b: number, c: number, d: number, e: number, f: number): number;
 export function emitter_tick(a: number): void;
 export function __wbg_fractalgenerator_free(a: number): void;
+export function generate_fractal(a: number, b: number, c: number, d: number, e: number, f: number, g: number): void;
 export function fractalgenerator_new(a: number, b: number): number;
 export function fractalgenerator_get_width(a: number): number;
 export function fractalgenerator_get_height(a: number): number;

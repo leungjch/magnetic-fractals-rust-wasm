@@ -97,6 +97,42 @@ function getInt32Memory0() {
     return cachedInt32Memory0;
 }
 
+let cachedUint8ClampedMemory0 = new Uint8ClampedArray();
+
+function getUint8ClampedMemory0() {
+    if (cachedUint8ClampedMemory0.buffer !== wasm.memory.buffer) {
+        cachedUint8ClampedMemory0 = new Uint8ClampedArray(wasm.memory.buffer);
+    }
+    return cachedUint8ClampedMemory0;
+}
+
+function getClampedArrayU8FromWasm0(ptr, len) {
+    return getUint8ClampedMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+/**
+* @param {number} image_width
+* @param {number} image_height
+* @param {Universe} universe
+* @param {number} k
+* @param {number} friction
+* @param {number} mass
+* @returns {Uint8ClampedArray}
+*/
+export function generate_fractal(image_width, image_height, universe, k, friction, mass) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        _assertClass(universe, Universe);
+        wasm.generate_fractal(retptr, image_width, image_height, universe.ptr, k, friction, mass);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v0 = getClampedArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 1);
+        return v0;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     return getUint8Memory0().subarray(ptr / 1, ptr / 1 + len);
 }
@@ -920,6 +956,7 @@ function finalizeInit(instance, module) {
     cachedInt32Memory0 = new Int32Array();
     cachedUint32Memory0 = new Uint32Array();
     cachedUint8Memory0 = new Uint8Array();
+    cachedUint8ClampedMemory0 = new Uint8ClampedArray();
 
     wasm.__wbindgen_start();
     return wasm;

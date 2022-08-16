@@ -2,7 +2,7 @@ mod utils;
 
 use rand::prelude::*;
 use std::mem;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*,Clamped};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -558,9 +558,10 @@ pub struct FractalGenerator {
     image_height: usize,
 }
 
-pub fn generate_fractal(image_width: usize, image_height: usize, universe: &Universe, k: f64, friction: f64, mass: f64) -> Vec<u8>{
-    FractalGenerator::new(image_width, image_height)
-    .generate(universe, k, friction, mass)
+#[wasm_bindgen]
+pub fn generate_fractal(image_width: usize, image_height: usize, universe: &Universe, k: f64, friction: f64, mass: f64) -> Clamped<Vec<u8>>{
+    Clamped(FractalGenerator::new(image_width, image_height)
+    .generate(universe, k, friction, mass))
 }
 
 #[wasm_bindgen]
