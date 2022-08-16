@@ -7,10 +7,11 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+use std::collections::HashMap;
 #[cfg(feature = "parallel")]
 pub use wasm_bindgen_rayon::init_thread_pool;
-use std::collections::HashMap;
 
+use web_sys::console;
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -29,10 +30,7 @@ pub fn greet() {
 
 #[wasm_bindgen]
 pub fn sum_of_squares(numbers: &[i32]) -> i32 {
-  numbers
-  .par_iter()
-  .map(|x| x * x)
-  .sum()
+    numbers.par_iter().map(|x| x * x).sum()
 }
 
 const INIT_STEPS: u32 = 250;
@@ -112,7 +110,7 @@ impl Default for Vec2D {
 
 #[wasm_bindgen]
 #[repr(C)]
-#[derive(Clone, Copy,Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Rgb {
     r: u8,
     g: u8,
@@ -585,78 +583,46 @@ impl FractalGenerator {
     // Generate a fractal image by placing a pendulum at each point of the canvas
     // And iterate the pendulum until it exceeds max_iters or reaches a magnet
     pub fn generate(&mut self, universe: &Universe, k: f64, friction: f64, mass: f64) {
-        
         // Create a hash map that stores the maximum number of iterations recorded for each magnet
         let mut max_iters_per_magnet = HashMap::<Rgb, u32>::new();
 
+
+        // console::log_1(&"Hello using web-sys".into());
         // Create an auxiliary vector that stores the number of iterations that was taken for each pendulum
-        let mut pendulum_iters = vec![0; self.image_width*self.image_height];
+        let mut pendulum_iters = vec![0; self.image_width * self.image_height];
 
         // First pass: Loop through the canvas and run a pendulum, and store info
-        for i in 0..self.image_height {
-            for j in 0..self.image_width {
-                let pendulum_pos = Vec2D::convert_coords(
-                    Vec2D::new(j as f64, i as f64),
-                    universe.width,
-                    universe.height,
-                    self.image_width as u32,
-                    self.image_height as u32,
-                );
-                assert!(universe.magnets.len() > 0);
-                // Create a pendulum
-                let mut p = Pendulum::new(pendulum_pos, k, friction, mass);
-                // Loop until max iters
-                let mut iter = 0;
-                while iter < universe.max_iters {
-                    p.tick(
-                        &universe.magnets,
-                        universe.width,
-                        universe.height,
-                        universe.steps,
-                        universe.delta,
-                    );
-                    // If p reached a magnet, do early break
-                    if p.is_stationary {
-                        break;
-                    }
-                    iter += 1;
-                }
-                let mut rgb = p.magnet_color.clone();
-                // If pendulum did not attract to a magnet, assign it a default colour
-                if !p.is_stationary {
-                    rgb = Rgb::black();
-                }
-                // Store the iterations taken at that position
-                pendulum_iters[i*self.image_width+j] = iter;
+        self.image_data = FractalGenerator::iter_all(
+            self.image_width as u32,
+            self.image_height as u32,
+            universe,
+            k,
+            friction,
+            mass,
+        )
+        .collect::<Vec<Rgb>>().clone();
+        // let dat: JsValue = self.image_data.len().to_string().into();
+        // console::log_2(&"Final data is".into(), &dat);
+        
 
-                // Store the magnet's colour (if pendulum was attracted to one)
-                self.image_data[i * self.image_width + j] = rgb;
-
-                // Store the maximum iteration taken for the magnet
-                // If we already inserted a value for the magnet,
-                // Replace it with the max of the two values
-                if max_iters_per_magnet.contains_key(&rgb) {
-                    let old_val = max_iters_per_magnet.get(&rgb).unwrap();
-                    max_iters_per_magnet.insert(rgb,u32::max(*old_val, iter));
-                }
-                // Else insert it
-                else {
-                    max_iters_per_magnet.insert(rgb, iter);
-                }
-            }
-        }
-        // Second pass: Update the image_data array with shading based on the max time per magnet
-        for i in 0..self.image_data.len() {
-            let magnet_color: Rgb = self.image_data[i];
-            let pendulum_iter: f64 = pendulum_iters[i] as f64;
-            let max_pendulum_iter: f64 = (*(max_iters_per_magnet.get(&magnet_color).unwrap())) as f64;
-            self.image_data[i] = Rgb::new(
-                (magnet_color.r as f64 * (1.0-pendulum_iter / max_pendulum_iter) ) as u8,
-                (magnet_color.g as f64 * (1.0-pendulum_iter / max_pendulum_iter) ) as u8,
-                (magnet_color.b as f64 * (1.0-pendulum_iter / max_pendulum_iter) ) as u8,
-            );
-        }
+        // // Second pass: Update the image_data array with shading based on the max time per magnet
+        // for i in 0..self.image_data.len() {
+        //     let magnet_color: Rgb = self.image_data[i];
+        //     let pendulum_iter: f64 = pendulum_iters[i] as f64;
+        //     let max_pendulum_iter: f64 =
+        //         (*(max_iters_per_magnet.get(&magnet_color).unwrap())) as f64;
+        //     self.image_data[i] = Rgb::new(
+        //         (magnet_color.r as f64 * (1.0 - pendulum_iter / max_pendulum_iter)) as u8,
+        //         (magnet_color.g as f64 * (1.0 - pendulum_iter / max_pendulum_iter)) as u8,
+        //         (magnet_color.b as f64 * (1.0 - pendulum_iter / max_pendulum_iter)) as u8,
+        //     );
+        // }
     }
+
+    // Multi-threaded implementation
+    // Rows iter_row in parallel
+    // #[cfg(feature = "rayon")]
+    // pub fn iter_all(&mut self) {}
 
     pub fn get_pointer(&self) -> *const Rgb {
         self.image_data.as_ptr()
@@ -671,5 +637,156 @@ impl FractalGenerator {
             Some(v) => *v,
             None => Rgb::black(),
         }
+    }
+}
+
+impl FractalGenerator {
+    // iter_row iterates through a row of self.image_data and computes `get_iterations` for each (x,y)
+    pub fn iter_row<'a>(
+        image_width: u32,
+        image_height: u32,
+        i: u32,
+        universe: &'a Universe,
+        k: f64,
+        friction: f64,
+        mass: f64,
+    ) -> impl Iterator<Item = (u32, Rgb)> + '_ {
+        let res = (0..(image_width)).map(move |j| {
+            FractalGenerator::get_iterations(
+                image_width,
+                image_height,
+                i as u32,
+                j as u32,
+                universe,
+                k,
+                friction,
+                mass,
+            )
+        });
+
+        // let dat: JsValue = res.len().to_string().into();
+        // console::log_2(&"Rowdata is".into(), &dat);
+        
+        res
+    }
+    // Single-threaded implementation
+    // #[cfg(feature = "rayon")]
+    pub fn iter_all<'a>(
+        image_width: u32,
+        image_height: u32,
+        universe: &'a Universe,
+        k: f64,
+        friction: f64,
+        mass: f64,
+    ) -> impl Iterator<Item = Rgb> + '_ {
+        let mut max_iters_map: HashMap<Rgb, u32> = HashMap::new();
+
+        let iters_colors: Vec<(u32, Rgb)> = (0..image_height).into_iter().flat_map(move |i| {
+            FractalGenerator::iter_row(
+                image_width,
+                image_height,
+                i as u32,
+                universe,
+                k,
+                friction,
+                mass,
+            )
+        }).collect();
+
+
+        // let dat: JsValue = iters_colors.by_ref().collect::<Vec<(u32,Rgb)>>().len().to_string().into();
+        // console::log_2(&"All data is".into(), &dat);
+
+        iters_colors.iter().for_each(|(iters, color)| {
+            let dat4 : JsValue = max_iters_map.len().into();
+            // console::log_2(&"data555".into(), &dat4);
+            if max_iters_map.contains_key(color) {
+                let old_val = *(max_iters_map.get(color).unwrap());
+                max_iters_map.insert(*color, u32::max(*iters, old_val));
+            } else {
+                max_iters_map.insert(*color, *iters);
+            }
+        });
+
+        // let dat2: JsValue =  max_iters_map.len().into();
+        // console::log_2(&"All data2 is".into(), &dat2);
+
+
+        iters_colors.into_iter().map(move |(iters, color)| {
+            let max_iters = *(max_iters_map.get(&color).unwrap());
+            // console::log_1(&"helloooo".into());
+            Rgb::new(
+                (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
+                (color.g as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
+                (color.b as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
+            )
+        })
+
+
+
+        
+    }
+
+    pub fn get_iterations(
+        image_width: u32,
+        image_height: u32,
+        i: u32,
+        j: u32,
+        universe: &Universe,
+        k: f64,
+        friction: f64,
+        mass: f64,
+    ) -> (u32, Rgb) {
+        let pendulum_pos = Vec2D::convert_coords(
+            Vec2D::new(j as f64, i as f64),
+            universe.width,
+            universe.height,
+            image_width as u32,
+            image_height as u32,
+        );
+        assert!(universe.magnets.len() > 0);
+        // Create a pendulum
+        let mut p = Pendulum::new(pendulum_pos, k, friction, mass);
+        // Loop until max iters
+        let mut iter = 0;
+        while iter < universe.max_iters {
+            p.tick(
+                &universe.magnets,
+                universe.width,
+                universe.height,
+                universe.steps,
+                universe.delta,
+            );
+            // If p reached a magnet, do early break
+            if p.is_stationary {
+                break;
+            }
+            iter += 1;
+        }
+        let mut rgb = p.magnet_color.clone();
+        // // If pendulum did not attract to a magnet, assign it a default colour
+        if !p.is_stationary {
+            rgb = Rgb::black();
+        }
+
+        (iter, rgb)
+
+        // // Store the iterations taken at that position
+        // pendulum_iters[i * self.image_width + j] = iter;
+
+        // // Store the magnet's colour (if pendulum was attracted to one)
+        // self.image_data[i * self.image_width + j] = rgb;
+
+        // // Store the maximum iteration taken for the magnet
+        // // If we already inserted a value for the magnet,
+        // // Replace it with the max of the two values
+        // if max_iters_per_magnet.contains_key(&rgb) {
+        //     let old_val = max_iters_per_magnet.get(&rgb).unwrap();
+        //     max_iters_per_magnet.insert(rgb, u32::max(*old_val, iter));
+        // }
+        // // Else insert it
+        // else {
+        //     max_iters_per_magnet.insert(rgb, iter);
+        // }
     }
 }

@@ -28,7 +28,7 @@ memory = output.memory;
 
 
 import { GUI } from "dat.gui"
-let FRACTAL_SIZE = 512;
+let FRACTAL_SIZE = 256;
 let SCALE = 16;
 const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE
