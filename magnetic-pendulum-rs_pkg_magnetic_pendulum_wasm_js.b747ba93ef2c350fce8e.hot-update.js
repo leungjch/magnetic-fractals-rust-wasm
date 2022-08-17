@@ -7,7 +7,7 @@
  * or disable the default devtool with "devtool: false".
  * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
  */
-(self["webpackChunkclient_ts"] = self["webpackChunkclient_ts"] || []).push([["magnetic-pendulum-rs_pkg_magnetic_pendulum_wasm_js"],{
+self["webpackHotUpdateclient_ts"]("magnetic-pendulum-rs_pkg_magnetic_pendulum_wasm_js",{
 
 /***/ "../magnetic-pendulum-rs/pkg/magnetic_pendulum_wasm.js":
 /*!*************************************************************!*\
@@ -25,8 +25,8 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \******************************************************************/
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-eval("module.exports = __webpack_require__.p + \"9f08bd85795b0a43ef7b.wasm\";\n\n//# sourceURL=webpack://client-ts/../magnetic-pendulum-rs/pkg/magnetic_pendulum_wasm_bg.wasm?");
+eval("module.exports = __webpack_require__.p + \"a7812796bfd7b461ded8.wasm\";\n\n//# sourceURL=webpack://client-ts/../magnetic-pendulum-rs/pkg/magnetic_pendulum_wasm_bg.wasm?");
 
 /***/ })
 
-}]);
+});
