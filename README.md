@@ -18,7 +18,7 @@ We can generate a fractal image by looping over each (x,y) coordinate the the 2D
 The resulting image can look very interesting. There can often be regions concentrated with wildly varying colours, which indicate that a slight modification in the starting position of the pendulum can lead to a completely different trajectory and magnet. I personally had a lot of fun playing with different magnet configurations and seeing what fractal images come out!
 
 <p align='center' width='100%'>
-<img src="screenshots/image3.jpg" alt="drawing" width="50%"/>
+<img src="screenshots/image4.jpg" alt="drawing" width="50%"/>
 </p>
 
 ## Tech details
