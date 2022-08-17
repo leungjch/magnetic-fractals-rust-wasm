@@ -21,5 +21,5 @@ The resulting image can look very interesting. There can often be regions concen
 
 
 ## Tech details
-- `wasm-bindgen` and `wasm-pack` for running 
+- `wasm-bindgen` and `wasm-pack` for generating wasm from Rust for Javascript/Typescript
 - [`wasm-bindgen-rayon`](https://github.com/GoogleChromeLabs/wasm-bindgen-rayon) for multithreaded rendering
