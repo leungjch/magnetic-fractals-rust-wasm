@@ -17,6 +17,7 @@ use web_sys::console;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+use rand::distributions::{Distribution, Uniform};
 
 extern crate console_error_panic_hook;
 
@@ -300,6 +301,20 @@ impl Universe {
 
     pub fn clear_emitters(&mut self) {
         self.emitters.clear();
+    }
+
+    pub fn spawn_random_emitters(&mut self, n: u32, tension: f64, friction: f64, mass: f64) {
+        self.emitters.clear();
+        let range_x = Uniform::from(0.0..self.width as f64);
+        let range_y = Uniform::from(0.0..self.height as f64);
+        let mut rng = rand::thread_rng();
+        // TODO: Replace with constants
+        let rand_interval = Uniform::<u32>::from(50..150); 
+        (0..n).into_iter().for_each(|_|{
+            self.emitters.push(
+                Emitter::new(range_x.sample(&mut rng), range_y.sample(&mut rng), rand_interval.sample(&mut rng), tension, friction, mass)
+            );
+        })
     }
 
     pub fn tick(&mut self) {
@@ -651,9 +666,6 @@ impl FractalGenerator {
                 mass,
             )
         });
-
-        // let dat: JsValue = res.len().to_string().into();
-        // console::log_2(&"Rowdata is".into(), &dat);
         
         res
     }
@@ -681,25 +693,24 @@ impl FractalGenerator {
             )
         }).collect();
 
-        console::log_2(&"Rowdata is".into(), &"hi".into());
+        // Method 1: Get max iters per magnet
+        iters_colors.iter().for_each(|(iters, color)| {
+            if max_iters_map.contains_key(color) {
+                let old_val = *(max_iters_map.get(color).unwrap());
+                max_iters_map.insert(*color, u32::max(*iters, old_val));
+            } else {
+                max_iters_map.insert(*color, *iters);
+            }
+        });
 
-        // iters_colors.par_iter_mut().for_each(|(iters, color)| {
-        //     if max_iters_map.contains_key(color) {
-        //         let old_val = *(max_iters_map.get(color).unwrap());
-        //         max_iters_map.insert(*color, u32::max(*iters, old_val));
-        //     } else {
-        //         max_iters_map.insert(*color, *iters);
-        //     }
-        // });
+        // // Method 2: Get max iters overall (faster)
+        // let max_iters : u32 = iters_colors.par_iter()
+        // .cloned()
+        // .reduce_with(|a,b| (u32::max(a.0, b.0), a.1))
+        // .unwrap().0;
 
-        let max_iters : u32 = iters_colors.par_iter()
-        .cloned()
-        .reduce_with(|a,b| (u32::max(a.0, b.0), a.1))
-        .unwrap().0;
-
-        console::log_1(&"hello running iter_all".into());
         iters_colors.into_par_iter().flat_map(move |(iters, color)| {
-            // let max_iters = *(max_iters_map.get(&color).unwrap());
+            let max_iters = *(max_iters_map.get(&color).unwrap());
             // let max_iters = 10;
             vec![
                 (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
@@ -708,13 +719,6 @@ impl FractalGenerator {
                 255,
                 ]
         })
-
-        // (0..image_width*image_height).into_par_iter().flat_map_iter(|i|{
-        //     // console::log_1(&"hello".into());
-        //     vec![
-        //         0,0,0,255
-        //     ]
-        // })
         
     }
 
@@ -760,23 +764,5 @@ impl FractalGenerator {
         }
 
         (iter, rgb)
-
-        // // Store the iterations taken at that position
-        // pendulum_iters[i * self.image_width + j] = iter;
-
-        // // Store the magnet's colour (if pendulum was attracted to one)
-        // self.image_data[i * self.image_width + j] = rgb;
-
-        // // Store the maximum iteration taken for the magnet
-        // // If we already inserted a value for the magnet,
-        // // Replace it with the max of the two values
-        // if max_iters_per_magnet.contains_key(&rgb) {
-        //     let old_val = max_iters_per_magnet.get(&rgb).unwrap();
-        //     max_iters_per_magnet.insert(rgb, u32::max(*old_val, iter));
-        // }
-        // // Else insert it
-        // else {
-        //     max_iters_per_magnet.insert(rgb, iter);
-        // }
     }
 }

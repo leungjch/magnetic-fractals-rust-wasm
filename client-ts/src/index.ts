@@ -26,8 +26,6 @@ const universe = new wasm.Universe(64, 64, 500);
 const width = universe.width() * SCALE
 const height = universe.height() * SCALE
 // Set default magnet
-
-
             // Magnet::new(
             //     Vec2D::new(width as f64 / 3.0, height as f64 / 2.0),
             //     100.0,
@@ -77,6 +75,7 @@ var state = {
   emitter_interval: 50,
   show_fractal: true,
   show_magnets: true,
+  spawn_rate: 10,
 };
 
 var reset_button = {
@@ -171,6 +170,7 @@ gui.add(state, "show_velocity").name("Show velocity")
 gui.add(state, "show_tension").name("Show tension")
 gui.add(state, "show_fractal").name("Show fractal")
 gui.add(state, "show_magnets").name("Show magnets")
+gui.add(state, "spawn_rate", 0, 500).name("Spawn rate").onChange((new_rate: number) => { universe.spawn_random_emitters(new_rate, state.tension, state.friction, state.mass)})
 gui.add(reset_button, 'clear').name("Clear all");
 gui.add(generate_fractal_button, "gen_fractal").name("Generate fractal");
 
