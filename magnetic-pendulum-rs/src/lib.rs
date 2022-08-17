@@ -2,7 +2,7 @@ mod utils;
 
 use rand::prelude::*;
 use std::mem;
-use wasm_bindgen::{prelude::*,Clamped};
+use wasm_bindgen::{prelude::*, Clamped};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -20,7 +20,6 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 use rand::distributions::{Distribution, Uniform};
 
 extern crate console_error_panic_hook;
-
 
 #[wasm_bindgen]
 extern "C" {
@@ -199,7 +198,7 @@ pub struct Universe {
 #[wasm_bindgen]
 impl Universe {
     #[wasm_bindgen(constructor)]
-    pub fn new(width: u32, height: u32, max_iters: u32) -> Universe {
+    pub fn new(width: u32, height: u32, max_iters: u32, steps: u32) -> Universe {
         // create some magnets
         let magnets = vec![
             // Magnet::new(
@@ -233,7 +232,7 @@ impl Universe {
             emitters: vec![],
             max_iters,
             nums: vec![3.14; 1],
-            steps: INIT_STEPS,
+            steps: steps,
             delta: INIT_DELTA,
         }
     }
@@ -263,6 +262,20 @@ impl Universe {
     pub fn create_magnet(&mut self, x: f64, y: f64, strength: f64, radius: f64) {
         self.magnets
             .push(Magnet::new(Vec2D::new(x, y), strength, radius));
+    }
+
+    pub fn create_magnet_with_rgb(
+        &mut self,
+        x: f64,
+        y: f64,
+        strength: f64,
+        radius: f64,
+        r: u8,
+        g: u8,
+        b: u8,
+    ) {
+        self.magnets
+            .push(Magnet::new_with_rgb(Vec2D::new(x, y), strength, radius, r, g, b))
     }
 
     pub fn create_pendulum(&mut self, x: f64, y: f64, tension: f64, friction: f64, mass: f64) {
@@ -309,11 +322,16 @@ impl Universe {
         let range_y = Uniform::from(0.0..self.height as f64);
         let mut rng = rand::thread_rng();
         // TODO: Replace with constants
-        let rand_interval = Uniform::<u32>::from(50..150); 
-        (0..n).into_iter().for_each(|_|{
-            self.emitters.push(
-                Emitter::new(range_x.sample(&mut rng), range_y.sample(&mut rng), rand_interval.sample(&mut rng), tension, friction, mass)
-            );
+        let rand_interval = Uniform::<u32>::from(50..150);
+        (0..n).into_iter().for_each(|_| {
+            self.emitters.push(Emitter::new(
+                range_x.sample(&mut rng),
+                range_y.sample(&mut rng),
+                rand_interval.sample(&mut rng),
+                tension,
+                friction,
+                mass,
+            ));
         })
     }
 
@@ -435,6 +453,15 @@ impl Magnet {
             strength,
             radius,
             color: Rgb::random_pastel(),
+        }
+    }
+
+    pub fn new_with_rgb(pos: Vec2D, strength: f64, radius: f64, r: u8, g: u8, b: u8) -> Magnet {
+        Magnet {
+            pos,
+            strength,
+            radius,
+            color: Rgb::new(r, g, b),
         }
     }
 
@@ -577,19 +604,29 @@ pub struct FractalGenerator {
 }
 
 #[wasm_bindgen]
-pub fn generate_fractal(image_width: usize, image_height: usize, universe: &Universe, k: f64, friction: f64, mass: f64) -> Clamped<Vec<u8>>{
-        console_error_panic_hook::set_once();
-    Clamped(FractalGenerator::new(image_width, image_height)
-    .generate(universe, k, friction, mass))
+pub fn generate_fractal(
+    image_width: usize,
+    image_height: usize,
+    universe: &Universe,
+    k: f64,
+    friction: f64,
+    mass: f64,
+) -> Clamped<Vec<u8>> {
+    console_error_panic_hook::set_once();
+    Clamped(FractalGenerator::new(image_width, image_height).generate(universe, k, friction, mass))
 }
 
 #[wasm_bindgen]
-pub fn generate_rand() -> Clamped<Vec<u8>>{
+pub fn generate_rand() -> Clamped<Vec<u8>> {
     Clamped(
-        (0..512*512).into_par_iter().map(|i: usize|{
-            // console::log_1(&"hello".into());
-            128
-        }).collect::<Vec<u8>>())
+        (0..512 * 512)
+            .into_par_iter()
+            .map(|i: usize| {
+                // console::log_1(&"hello".into());
+                128
+            })
+            .collect::<Vec<u8>>(),
+    )
 }
 
 #[wasm_bindgen]
@@ -618,7 +655,6 @@ impl FractalGenerator {
         // Create a hash map that stores the maximum number of iterations recorded for each magnet
         let mut max_iters_per_magnet = HashMap::<Rgb, u32>::new();
 
-
         // console::log_1(&"Hello using web-sys".into());
         // Create an auxiliary vector that stores the number of iterations that was taken for each pendulum
         let mut pendulum_iters = vec![0; self.image_width * self.image_height];
@@ -632,15 +668,14 @@ impl FractalGenerator {
             friction,
             mass,
         )
-        .collect::<Vec<u8>>().clone()
+        .collect::<Vec<u8>>()
+        .clone()
 
         // console_error_panic_hook::set_once();
         // (0..self.image_width*self.image_height).into_par_iter().map(|i: usize|{
         //     127
         // }).collect::<Vec<u8>>()
-
     }
-
 }
 
 impl FractalGenerator {
@@ -666,7 +701,7 @@ impl FractalGenerator {
                 mass,
             )
         });
-        
+
         res
     }
     // Single-threaded implementation
@@ -681,45 +716,51 @@ impl FractalGenerator {
     ) -> impl ParallelIterator<Item = u8> + '_ {
         let mut max_iters_map: HashMap<Rgb, u32> = HashMap::new();
 
-        let iters_colors: Vec<(u32, Rgb)> = (0..image_height).into_par_iter().flat_map_iter(move |i| {
-            FractalGenerator::iter_row(
-                image_width,
-                image_height,
-                i as u32,
-                universe,
-                k,
-                friction,
-                mass,
-            )
-        }).collect();
+        let iters_colors: Vec<(u32, Rgb)> = (0..image_height)
+            .into_par_iter()
+            .flat_map_iter(move |i| {
+                FractalGenerator::iter_row(
+                    image_width,
+                    image_height,
+                    i as u32,
+                    universe,
+                    k,
+                    friction,
+                    mass,
+                )
+            })
+            .collect();
 
-        // Method 1: Get max iters per magnet
-        iters_colors.iter().for_each(|(iters, color)| {
-            if max_iters_map.contains_key(color) {
-                let old_val = *(max_iters_map.get(color).unwrap());
-                max_iters_map.insert(*color, u32::max(*iters, old_val));
-            } else {
-                max_iters_map.insert(*color, *iters);
-            }
-        });
+        // // Method 1: Get max iters per magnet
+        // iters_colors.iter().for_each(|(iters, color)| {
+        //     if max_iters_map.contains_key(color) {
+        //         let old_val = *(max_iters_map.get(color).unwrap());
+        //         max_iters_map.insert(*color, u32::max(*iters, old_val));
+        //     } else {
+        //         max_iters_map.insert(*color, *iters);
+        //     }
+        // });
 
-        // // Method 2: Get max iters overall (faster)
-        // let max_iters : u32 = iters_colors.par_iter()
-        // .cloned()
-        // .reduce_with(|a,b| (u32::max(a.0, b.0), a.1))
-        // .unwrap().0;
+        // Method 2: Get max iters overall (faster)
+        let max_iters: u32 = iters_colors
+            .par_iter()
+            .cloned()
+            .reduce_with(|a, b| (u32::max(a.0, b.0), a.1))
+            .unwrap()
+            .0;
 
-        iters_colors.into_par_iter().flat_map(move |(iters, color)| {
-            let max_iters = *(max_iters_map.get(&color).unwrap());
-            // let max_iters = 10;
-            vec![
-                (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
-                (color.g as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
-                (color.b as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
-                255,
+        iters_colors
+            .into_par_iter()
+            .flat_map(move |(iters, color)| {
+                // let max_iters = *(max_iters_map.get(&color).unwrap());
+                // let max_iters = 10;
+                vec![
+                    (color.r as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
+                    (color.g as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
+                    (color.b as f64 * (1.0 - (iters as f64) / (max_iters as f64))) as u8,
+                    255,
                 ]
-        })
-        
+            })
     }
 
     pub fn get_iterations(
