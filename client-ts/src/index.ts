@@ -21,8 +21,9 @@ console.log("handlers is", handlers['multiThread'])
 
 import { GUI } from "dat.gui"
 let FRACTAL_SIZE = 256;
+let STEPS = 50;
 let SCALE = 16;
-const universe = new wasm.Universe(64, 64, 500);
+const universe = new wasm.Universe(64, 64, 500, 50);
 const width = universe.width() * SCALE
 const height = universe.height() * SCALE
 // Set default magnet
@@ -76,6 +77,7 @@ var state = {
   show_fractal: true,
   show_magnets: true,
   spawn_rate: 10,
+  max_iters: 500
 };
 
 var reset_button = {
@@ -128,7 +130,9 @@ var generate_fractal_button = {
       k: state.tension,
       friction: state.friction,
       mass: state.mass,
-      magnets: magnets
+      magnets: magnets,
+      max_iters: state.max_iters,
+      steps: state.steps
     });
 
     let pixel_width = width / FRACTAL_SIZE;
@@ -138,17 +142,12 @@ var generate_fractal_button = {
 
       let rgb = new Rgb(data[i], data[i + 1], data[i + 2]) // ignore alpha
       ctx.fillStyle = rgb.to_string();
-      console.log()
       let x = (i / 4) % FRACTAL_SIZE * pixel_width;
       let y = (i / 4) / FRACTAL_SIZE * pixel_width;
-      console.log(x, y)
       ctx.fillRect(x, y, pixel_width, pixel_width)
     }
     // save the background so that we do not have to redraw/read from wasm memory each frame
     fractal_background = ctx.getImageData(0, 0, width, height);
-
-    // const fractal_background_small = new ImageData(raw_image_data, FRACTAL_SIZE, FRACTAL_SIZE);
-    // fractal_background = await resizeImageData(fractal_background_small, width, height)
 
   }
 }
@@ -170,6 +169,7 @@ gui.add(state, "show_velocity").name("Show velocity")
 gui.add(state, "show_tension").name("Show tension")
 gui.add(state, "show_fractal").name("Show fractal")
 gui.add(state, "show_magnets").name("Show magnets")
+gui.add(state, "max_iters", 1,1000).name("Max iterations")
 gui.add(state, "spawn_rate", 0, 500).name("Spawn rate").onChange((new_rate: number) => { universe.spawn_random_emitters(new_rate, state.tension, state.friction, state.mass)})
 gui.add(reset_button, 'clear').name("Clear all");
 gui.add(generate_fractal_button, "gen_fractal").name("Generate fractal");
@@ -296,31 +296,6 @@ function draw(universe: wasm.Universe, t: number) {
 
 
 };
-// function update_fractal_background() {
-
-//   ctx.clearRect(0, 0, width, height); // clear canvas
-//   // Render the fractal as a background
-//   const img_ptr = fractal_generator.get_pointer()
-//   const rgb_sizeof = wasm.Rgb.size_of()
-//   const img_len = fractal_generator.get_length();
-//   let dv_img = new DataView(memory.buffer, img_ptr, img_len * rgb_sizeof);
-//   // Get image data
-//   let fractal_width = fractal_generator.get_width();
-//   let fractal_height = fractal_generator.get_height();
-//   let pixel_width = width / fractal_width;
-//   ctx.strokeStyle = "rgba(1, 1, 1, 0)";
-//   for (let i = 0; i < fractal_height; i++) {
-//     for (let j = 0; j < fractal_width; j++) {
-//       let rgb = getRgb(dv_img, rgb_sizeof * (i * fractal_width + j));
-//       ctx.fillStyle = rgb.to_string();
-//       ctx.fillRect(j * pixel_width, i * pixel_width, pixel_width, pixel_width)
-
-//     }
-//   }
-//   // save the background so that we do not have to redraw/read from wasm memory each frame
-//   fractal_background = ctx.getImageData(0, 0, width, height);
-// }
-
 
 function getMagnet(dv: DataView, ptr: number) {
   let offset = ptr;

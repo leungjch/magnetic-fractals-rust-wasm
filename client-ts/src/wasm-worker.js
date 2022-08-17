@@ -38,12 +38,12 @@ Comlink.expose({
 
 // Wrap wasm-bindgen exports (the `generate` function) to add time measurement.
 function wrapExports({generate_rand, generate_fractal, Universe}) {
-  return ({ image_width, image_height, universe, k, friction ,mass, magnets  }) => {
+  return ({ image_width, image_height, universe, k, friction ,mass, magnets, max_iters, steps  }) => {
     const start = performance.now();
     console.log("hey", Universe)
-    let uni = new Universe(64,64,500);
+    let uni = new Universe(64,64,max_iters, steps);
     for (let magnet of magnets) {
-      uni.create_magnet(magnet.pos.x, magnet.pos.y, magnet.strength, magnet.radius)
+      uni.create_magnet_with_rgb(magnet.pos.x, magnet.pos.y, magnet.strength, magnet.radius, magnet.color.r, magnet.color.g, magnet.color.b)
     }
     let universe_obj = Universe.__wrap(universe)
     console.log("Hi", universe, image_width, image_height)

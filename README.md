@@ -26,3 +26,22 @@ The resulting image can look very interesting. There can often be regions concen
 ## Tech details
 - `wasm-bindgen` and `wasm-pack` for generating wasm from Rust for Javascript/Typescript
 - [`wasm-bindgen-rayon`](https://github.com/GoogleChromeLabs/wasm-bindgen-rayon) for multithreaded rendering
+
+## Installing
+Install rust dependencies:
+```
+cd magnetic-pendulum-rs && cargo install
+```
+Build and generate wasm:
+```
+wasm-pack build --target web --features=parallel --release
+```
+
+Install Typescript client dependencies:
+```
+cd client-ts && npm install
+```
+Start the dev server:
+```
+npm run start
+```
